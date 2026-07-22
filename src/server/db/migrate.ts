@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { sql } from "drizzle-orm";
-import { getDb, ensureDataDirs } from "./index";
+import { getDb, getSqlite, ensureDataDirs } from "./index";
 
 /** Apply schema via drizzle push-style SQL for simplicity in Phase 1. */
 export function migrate() {
@@ -55,6 +55,7 @@ export function migrate() {
     end_on TEXT,
     status TEXT NOT NULL,
     purpose TEXT,
+    how_it_helps TEXT,
     prescriber TEXT,
     notes TEXT,
     source TEXT NOT NULL DEFAULT 'manual',
@@ -172,6 +173,16 @@ export function migrate() {
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`);
+
+  // Additive migrations for existing DBs (CREATE TABLE IF NOT EXISTS won't alter columns)
+  ensureColumn("medications", "how_it_helps", "TEXT");
+}
+
+function ensureColumn(table: string, column: string, typeSql: string) {
+  const sqlite = getSqlite();
+  const rows = sqlite.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (rows.some((r) => r.name === column)) return;
+  sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${typeSql}`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]!).href) {

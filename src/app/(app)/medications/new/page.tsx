@@ -110,6 +110,16 @@ export default function NewMedicationPage() {
         </div>
 
         <Label>
+          How it helps
+          <Textarea
+            name="howItHelps"
+            rows={2}
+            maxLength={2000}
+            placeholder="e.g. Reduces colon inflammation; maintenance therapy for UC"
+          />
+        </Label>
+
+        <Label>
           Notes
           <Textarea name="notes" rows={4} maxLength={10000} />
         </Label>

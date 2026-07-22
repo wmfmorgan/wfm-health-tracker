@@ -31,6 +31,17 @@ describe("medications", () => {
     expect(m.prn).toBe(true);
   });
 
+  it("stores how it helps", () => {
+    const m = createMedication({
+      name: "Mesalamine",
+      status: "active",
+      prn: false,
+      purpose: "Ulcerative colitis",
+      howItHelps: "Reduces colon inflammation; maintenance therapy",
+    });
+    expect(m.howItHelps).toContain("inflammation");
+  });
+
   it("updates and deletes", () => {
     const m = createMedication({ name: "X", status: "active", prn: false });
     updateMedication(m.id, { name: "Y", status: "stopped", prn: false });

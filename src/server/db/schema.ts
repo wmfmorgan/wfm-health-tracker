@@ -51,7 +51,8 @@ export const medications = sqliteTable("medications", {
   startOn: text("start_on"),
   endOn: text("end_on"),
   status: text("status").notNull(), // active | stopped
-  purpose: text("purpose"),
+  purpose: text("purpose"), // diagnosis name
+  howItHelps: text("how_it_helps"), // plain-language benefit / what it does
   prescriber: text("prescriber"),
   notes: text("notes"),
   source: text("source").notNull().default("manual"),

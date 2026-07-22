@@ -150,6 +150,17 @@ export default async function MedicationDetailPage({
         </div>
 
         <Label>
+          How it helps
+          <Textarea
+            name="howItHelps"
+            rows={2}
+            maxLength={2000}
+            placeholder="e.g. Reduces colon inflammation; maintenance therapy for UC"
+            defaultValue={medication.howItHelps ?? ""}
+          />
+        </Label>
+
+        <Label>
           Notes
           <Textarea
             name="notes"

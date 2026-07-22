@@ -11,6 +11,7 @@ export const medicationSchema = z.object({
   endOn: z.string().optional().nullable(),
   status: z.enum(["active", "stopped"]),
   purpose: z.string().max(300).optional().nullable(),
+  howItHelps: z.string().max(2000).optional().nullable(),
   prescriber: z.string().max(200).optional().nullable(),
   notes: z.string().max(10000).optional().nullable(),
 });

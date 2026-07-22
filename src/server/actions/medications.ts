@@ -27,6 +27,7 @@ function parseMedicationForm(formData: FormData) {
     startOn: emptyToNull(raw.startOn),
     endOn: emptyToNull(raw.endOn),
     purpose: emptyToNull(raw.purpose),
+    howItHelps: emptyToNull(raw.howItHelps),
     prescriber: emptyToNull(raw.prescriber),
     notes: emptyToNull(raw.notes),
   });

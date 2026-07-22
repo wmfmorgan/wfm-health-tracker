@@ -88,7 +88,7 @@ export default async function MedicationsPage({
         <input
           name="q"
           defaultValue={q ?? ""}
-          placeholder="Search name, dose, purpose, notes…"
+          placeholder="Search name, dose, purpose, how it helps, notes…"
           className="min-w-[16rem] flex-1 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
         />
         <Button type="submit" variant="secondary">
