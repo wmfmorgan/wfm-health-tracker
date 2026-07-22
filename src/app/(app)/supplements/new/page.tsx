@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createSupplementAction } from "@/server/actions/supplements";
 import { DiagnosisSelect } from "@/components/records/diagnosis-select";
+import { ProviderSelect } from "@/components/records/provider-select";
 import { listDiagnosesForSelect } from "@/server/services/diagnoses";
+import { listProvidersForSelect } from "@/server/services/providers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +19,7 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 
 export default function NewSupplementPage() {
   const diagnoses = listDiagnosesForSelect();
+  const providers = listProvidersForSelect();
 
   return (
     <div className="text-zinc-900">
@@ -95,9 +98,14 @@ export default function NewSupplementPage() {
             <Input name="endOn" type="date" />
           </Label>
 
-          <Label className="sm:col-span-2">
+          <Label>
             Purpose (diagnosis)
             <DiagnosisSelect name="purpose" diagnoses={diagnoses} />
+          </Label>
+
+          <Label>
+            Provider
+            <ProviderSelect name="prescriber" providers={providers} />
           </Label>
         </div>
 

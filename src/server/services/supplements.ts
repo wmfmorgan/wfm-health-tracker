@@ -23,6 +23,7 @@ export function listSupplements(filter?: { status?: string; q?: string }) {
         like(supplements.notes, pattern),
         like(supplements.purpose, pattern),
         like(supplements.howItHelps, pattern),
+        like(supplements.prescriber, pattern),
         like(supplements.dose, pattern),
       )!,
     );
@@ -62,6 +63,7 @@ export function createSupplement(input: SupplementInput) {
       status: input.status,
       purpose: input.purpose || null,
       howItHelps: input.howItHelps || null,
+      prescriber: input.prescriber || null,
       notes: input.notes || null,
       source: "manual",
       createdAt: t,
@@ -87,6 +89,7 @@ export function updateSupplement(id: string, input: SupplementInput) {
       status: input.status,
       purpose: input.purpose || null,
       howItHelps: input.howItHelps || null,
+      prescriber: input.prescriber || null,
       notes: input.notes || null,
       updatedAt: nowIso(),
     })

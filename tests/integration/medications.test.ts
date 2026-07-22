@@ -58,15 +58,17 @@ describe("supplements", () => {
     deleteSupplement(s.id);
   });
 
-  it("stores purpose and how it helps", () => {
+  it("stores purpose, how it helps, and provider", () => {
     const s = createSupplement({
       name: "Iron",
       status: "active",
       prn: false,
       purpose: "Iron deficiency anemia",
       howItHelps: "Rebuilds iron stores",
+      prescriber: "Dr. GI",
     });
     expect(s.purpose).toBe("Iron deficiency anemia");
     expect(s.howItHelps).toContain("iron");
+    expect(s.prescriber).toBe("Dr. GI");
   });
 });

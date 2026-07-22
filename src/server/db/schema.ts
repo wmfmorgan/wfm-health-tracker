@@ -73,6 +73,7 @@ export const supplements = sqliteTable("supplements", {
   status: text("status").notNull(),
   purpose: text("purpose"), // diagnosis name
   howItHelps: text("how_it_helps"),
+  prescriber: text("prescriber"), // provider who recommended (same role as meds)
   notes: text("notes"),
   source: text("source").notNull().default("manual"),
   createdAt: text("created_at").notNull(),

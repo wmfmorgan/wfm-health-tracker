@@ -10,6 +10,8 @@ import {
 import { AttachmentsPanel } from "@/components/records/attachments-panel";
 import { ConfirmDeleteButton } from "@/components/records/confirm-delete-button";
 import { DiagnosisSelect } from "@/components/records/diagnosis-select";
+import { ProviderSelect } from "@/components/records/provider-select";
+import { listProvidersForSelect } from "@/server/services/providers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,7 @@ export default async function SupplementDetailPage({
   if (!supplement) notFound();
   const documents = listDocumentsForEntity("supplement", supplement.id);
   const diagnoses = listDiagnosesForSelect();
+  const providers = listProvidersForSelect();
 
   return (
     <div className="text-zinc-900">
@@ -127,12 +130,21 @@ export default async function SupplementDetailPage({
             <Input name="endOn" type="date" defaultValue={supplement.endOn ?? ""} />
           </Label>
 
-          <Label className="sm:col-span-2">
+          <Label>
             Purpose (diagnosis)
             <DiagnosisSelect
               name="purpose"
               diagnoses={diagnoses}
               defaultValue={supplement.purpose}
+            />
+          </Label>
+
+          <Label>
+            Provider
+            <ProviderSelect
+              name="prescriber"
+              providers={providers}
+              defaultValue={supplement.prescriber}
             />
           </Label>
         </div>

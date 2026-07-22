@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { medicationSchema } from "./medication";
 
-export const supplementSchema = medicationSchema.omit({ prescriber: true });
+/** Same shape as medications (including provider/prescriber). */
+export const supplementSchema = medicationSchema;
 
 export type SupplementInput = z.infer<typeof supplementSchema>;
