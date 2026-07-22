@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { getProfile } from "@/server/services/profile";
 import { savePreferredUnitsAction } from "@/server/actions/profile";
+import { saveAiSettingsAction } from "@/server/actions/settings";
 import { logoutAction } from "@/server/actions/auth";
 import { authEnabled, getSession } from "@/server/auth/session";
+import { getAiSettings, hasXaiApiKey } from "@/server/services/settings";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +28,8 @@ export default async function SettingsPage() {
   const session = await getSession();
   const maxUploadBytes = Number(process.env.MAX_UPLOAD_BYTES ?? 25 * 1024 * 1024);
   const dataDir = process.env.DATA_DIR || "./data";
+  const aiSettings = getAiSettings();
+  const xaiConfigured = hasXaiApiKey();
 
   return (
     <div className="text-zinc-900">
@@ -152,19 +159,73 @@ export default async function SettingsPage() {
         </p>
       </section>
 
-      <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-5 opacity-80 shadow-sm">
-        <h2 className="mb-2 text-lg font-medium text-zinc-700">AI providers</h2>
-        <p className="text-sm text-zinc-500">
-          Coming in Phase 3. Configure xAI Grok and local Ollama models for chat, lab interpretation,
-          and med/supplement checks. Disabled in Phase 1 (records hub only).
+      <section className="mb-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-2 text-lg font-medium">AI providers</h2>
+        <p className="mb-4 text-sm text-zinc-600">
+          Defaults for PDF lab import (Phase 2). You can override provider/model per import.
         </p>
-        <button
-          type="button"
-          disabled
-          className="mt-3 cursor-not-allowed rounded border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-400"
-        >
-          AI providers (Phase 3)
-        </button>
+        <form action={asFormAction(saveAiSettingsAction)} className="grid max-w-lg gap-4">
+          <Label>
+            Default provider
+            <Select name="defaultProvider" defaultValue={aiSettings.defaultProvider}>
+              <option value="ollama">Ollama (local)</option>
+              <option value="grok">Grok (cloud)</option>
+            </Select>
+          </Label>
+          <Label>
+            Grok model
+            <Input
+              name="grokModel"
+              type="text"
+              defaultValue={aiSettings.grokModel}
+              placeholder="grok-4.5"
+              required
+            />
+          </Label>
+          <Label>
+            Ollama base URL
+            <Input
+              name="ollamaBaseUrl"
+              type="url"
+              defaultValue={aiSettings.ollamaBaseUrl}
+              placeholder="http://127.0.0.1:11434"
+              required
+            />
+          </Label>
+          <Label>
+            Ollama model
+            <Input
+              name="ollamaModel"
+              type="text"
+              defaultValue={aiSettings.ollamaModel}
+              placeholder="llama3.2"
+              required
+            />
+          </Label>
+          <div>
+            <p className="text-sm font-medium text-zinc-800">XAI_API_KEY</p>
+            <p className="mt-1 text-sm text-zinc-600">
+              Configured:{" "}
+              <span
+                className={`font-medium ${xaiConfigured ? "text-emerald-700" : "text-amber-700"}`}
+              >
+                {xaiConfigured ? "Yes" : "No"}
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Set <code className="rounded bg-zinc-100 px-1 py-0.5">XAI_API_KEY</code> in{" "}
+              <code className="rounded bg-zinc-100 px-1 py-0.5">.env</code> (server-side only).
+              Required for Grok extract.
+            </p>
+          </div>
+          <p className="text-sm text-zinc-600">
+            Grok sends extracted PDF text to xAI. Each cloud import requires an explicit
+            per-import confirmation before any data leaves this machine.
+          </p>
+          <div>
+            <Button type="submit">Save AI settings</Button>
+          </div>
+        </form>
       </section>
     </div>
   );
