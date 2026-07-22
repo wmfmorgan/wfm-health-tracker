@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { getProfile } from "@/server/services/profile";
 import { savePreferredUnitsAction } from "@/server/actions/profile";
 import { logoutAction } from "@/server/actions/auth";
 import { authEnabled, getSession } from "@/server/auth/session";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -124,22 +126,28 @@ export default async function SettingsPage() {
 
       <section className="mb-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
         <h2 className="mb-2 text-lg font-medium">Backup</h2>
-        <p className="mb-2 text-sm text-zinc-600">
-          All structured data (SQLite) and uploaded PDFs live under the data directory. Copy the entire
-          folder to back up.
+        <p className="mb-3 text-sm text-zinc-600">
+          Download a zip of your database and uploaded PDFs. The app checkpoints SQLite first so the
+          backup is consistent.
         </p>
-        <p className="text-sm text-zinc-600">
+        <Link href="/api/backup" prefetch={false}>
+          <Button type="button">Download backup</Button>
+        </Link>
+        <p className="mt-4 text-sm text-zinc-600">
           Current data directory:{" "}
           <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-900">
             {dataDir}
           </code>
         </p>
-        <pre className="mt-3 overflow-x-auto rounded border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-800">
-          {`# Example backup
-cp -R ${dataDir} ~/Backups/wfm-health-$(date +%Y%m%d)`}
+        <p className="mt-2 text-sm text-zinc-500">
+          You can also copy the folder manually:
+        </p>
+        <pre className="mt-2 overflow-x-auto rounded border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-800">
+          {`cp -R ${dataDir} ~/Backups/wfm-health-$(date +%Y%m%d)`}
         </pre>
         <p className="mt-2 text-sm text-zinc-500">
-          Restore by replacing the data directory and restarting the app. Override the path with{" "}
+          Restore: stop the app, replace the contents of the data directory with the unzipped
+          backup (or folder copy), then restart. Override the path with{" "}
           <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs">DATA_DIR</code> if needed.
         </p>
       </section>
