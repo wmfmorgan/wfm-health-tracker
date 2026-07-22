@@ -45,24 +45,34 @@ describe("providers", () => {
 });
 
 describe("analytes", () => {
+  it("seeds common analytes with units", () => {
+    const list = listAnalytes();
+    expect(list.length).toBeGreaterThan(50);
+    expect(getAnalyteByName("Hemoglobin")?.defaultUnit).toBe("g/dL");
+    expect(getAnalyteByName("Fecal calprotectin")?.defaultUnit).toBe("ug/g");
+    expect(getAnalyteByName("CRP")?.defaultUnit).toBe("mg/L");
+  });
+
   it("creates unique analytes case-insensitively", () => {
     createAnalyte({ name: "WBC", defaultUnit: "K/uL" });
     ensureAnalyte("wbc", "K/uL");
-    expect(listAnalytes()).toHaveLength(1);
+    // Common seed already includes WBC; still only one row for that name
+    const wbcs = listAnalytes().filter((a) => a.name.toLowerCase() === "wbc");
+    expect(wbcs).toHaveLength(1);
     expect(getAnalyteByName("WBC")?.defaultUnit).toBe("K/uL");
   });
 
   it("seeds from lab results and registers on panel create", () => {
     createLabPanel(
       { name: "CBC", status: "final" },
-      [{ analyteName: "Hgb", value: "12", unit: "g/dL", flag: "normal" }],
+      [{ analyteName: "Custom Weird Analyte", value: "12", unit: "g/dL", flag: "normal" }],
     );
     const list = listAnalytes();
-    expect(list.some((a) => a.name === "Hgb")).toBe(true);
+    expect(list.some((a) => a.name === "Custom Weird Analyte")).toBe(true);
     const panel = createLabPanel(
       { name: "CBC 2", status: "final" },
-      [{ analyteName: "Hgb", value: "11.5", unit: "g/dL" }],
+      [{ analyteName: "Hemoglobin", value: "11.5", unit: "g/dL" }],
     );
-    expect(getLabPanel(panel.id)?.results[0].analyteName).toBe("Hgb");
+    expect(getLabPanel(panel.id)?.results[0].analyteName).toBe("Hemoglobin");
   });
 });

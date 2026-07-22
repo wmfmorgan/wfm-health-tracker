@@ -1,10 +1,76 @@
 import { eq, asc, like } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { bootstrapDb } from "@/server/db/bootstrap";
-import { analytes, labResults } from "@/server/db/schema";
+import { analytes, labResults, appSettings } from "@/server/db/schema";
 import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/dates";
 import type { AnalyteInput } from "@/lib/validation/analyte";
+import { COMMON_ANALYTES } from "@/server/services/common-analytes";
+
+const COMMON_SEED_KEY = "common_analytes_seeded_v1";
+
+/** Seed built-in common analytes (idempotent; safe to call often). */
+export function seedCommonAnalytes() {
+  bootstrapDb();
+  const db = getDb();
+  const flag = db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, COMMON_SEED_KEY))
+    .get();
+  if (flag?.value === "1") return;
+
+  const existing = new Set(
+    db
+      .select({ name: analytes.name })
+      .from(analytes)
+      .all()
+      .map((r) => r.name.toLowerCase()),
+  );
+  const t = nowIso();
+  for (const row of COMMON_ANALYTES) {
+    const key = row.name.toLowerCase();
+    if (existing.has(key)) {
+      // Fill missing default unit on existing match
+      const current = db
+        .select()
+        .from(analytes)
+        .all()
+        .find((a) => a.name.toLowerCase() === key);
+      if (current && !current.defaultUnit && row.defaultUnit) {
+        db.update(analytes)
+          .set({
+            defaultUnit: row.defaultUnit,
+            notes: current.notes ?? row.notes ?? null,
+            updatedAt: t,
+          })
+          .where(eq(analytes.id, current.id))
+          .run();
+      }
+      continue;
+    }
+    db.insert(analytes)
+      .values({
+        id: newId(),
+        name: row.name,
+        defaultUnit: row.defaultUnit,
+        notes: row.notes ?? null,
+        createdAt: t,
+        updatedAt: t,
+      })
+      .run();
+    existing.add(key);
+  }
+
+  if (flag) {
+    db.update(appSettings)
+      .set({ value: "1" })
+      .where(eq(appSettings.key, COMMON_SEED_KEY))
+      .run();
+  } else {
+    db.insert(appSettings).values({ key: COMMON_SEED_KEY, value: "1" }).run();
+  }
+}
 
 /** Import distinct names from existing lab_results into the master list (idempotent). */
 export function seedAnalytesFromLabResults() {
@@ -40,6 +106,7 @@ export function seedAnalytesFromLabResults() {
 
 export function listAnalytes(filter?: { q?: string }) {
   bootstrapDb();
+  seedCommonAnalytes();
   seedAnalytesFromLabResults();
   if (filter?.q?.trim()) {
     const pattern = `%${filter.q.trim()}%`;
