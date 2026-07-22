@@ -3,7 +3,7 @@ import { getProfile } from "@/server/services/profile";
 import { listAllergies } from "@/server/services/allergies";
 import { saveProfileAction } from "@/server/actions/profile";
 import { createAllergyAction, deleteAllergyAction } from "@/server/actions/allergies";
-import Link from "next/link";
+import { ConfirmDeleteButton } from "@/components/records/confirm-delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +18,8 @@ export default function ProfilePage() {
   const age = ageFromDob(profile.dateOfBirth);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8 text-zinc-900">
-      <div className="mb-6 flex items-baseline justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-        <Link href="/" className="text-sm text-zinc-600 underline-offset-2 hover:underline">
-          Home
-        </Link>
-      </div>
+    <div className="text-zinc-900">
+      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Profile</h1>
 
       <section className="mb-10 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-medium">Demographics & baseline</h2>
@@ -180,14 +175,11 @@ export default function ProfilePage() {
                   </p>
                   {a.notes ? <p className="mt-1 text-zinc-500">{a.notes}</p> : null}
                 </div>
-                <form action={asFormAction(deleteAllergyAction.bind(null, a.id))}>
-                  <button
-                    type="submit"
-                    className="text-xs font-medium text-red-700 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </form>
+                <ConfirmDeleteButton
+                  action={asFormAction(deleteAllergyAction.bind(null, a.id))}
+                  message={`Delete allergy “${a.name}”?`}
+                  label="Delete"
+                />
               </li>
             ))}
           </ul>
@@ -235,6 +227,6 @@ export default function ProfilePage() {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }
