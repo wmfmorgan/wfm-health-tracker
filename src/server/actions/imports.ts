@@ -57,7 +57,7 @@ function parseResultsJson(formData: FormData): LabResultInput[] {
 }
 
 function revalidateImportPaths(jobId?: string) {
-  revalidatePath("/import");
+  revalidatePath("/import", "layout");
   if (jobId) revalidatePath(`/import/${jobId}`);
   revalidatePath("/labs");
   revalidatePath("/documents");
@@ -77,7 +77,7 @@ export async function retryImportAction(jobId: string) {
 
 export async function acceptDraftPanelAction(draftPanelId: string) {
   const { labPanelId } = acceptDraftPanel(draftPanelId);
-  revalidatePath("/import");
+  revalidatePath("/import", "layout");
   revalidatePath("/labs");
   revalidatePath(`/labs/${labPanelId}`);
   revalidatePath("/documents");
@@ -86,7 +86,7 @@ export async function acceptDraftPanelAction(draftPanelId: string) {
 
 export async function rejectDraftPanelAction(draftPanelId: string) {
   rejectDraftPanel(draftPanelId);
-  revalidatePath("/import");
+  revalidatePath("/import", "layout");
   revalidatePath("/labs");
   return { ok: true as const };
 }
@@ -127,6 +127,6 @@ export async function updateDraftPanelAction(draftPanelId: string, formData: For
     results,
   );
 
-  revalidatePath("/import");
+  revalidatePath("/import", "layout");
   return { ok: true as const };
 }
