@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { useFreshDb, getDb } from "../helpers/test-db";
 import { importJobs, labPanels } from "@/server/db/schema";
+import { PdfTextError } from "@/lib/pdf-text";
 import { savePdfDocument, deleteDocument, listDocumentsForEntity } from "@/server/services/documents";
 import {
   createImportJob,
@@ -11,8 +12,12 @@ import {
   getImportJob,
   setJobStatus,
   acceptAllPending,
+  startImportFromPdf,
+  confirmCloudAndExtract,
+  runExtractForJob,
 } from "@/server/services/imports";
 import { getLabPanel, listLabPanels } from "@/server/services/labs";
+import type { AIProvider } from "@/server/ai/types";
 
 useFreshDb();
 
@@ -214,5 +219,107 @@ describe("import service", () => {
     expect(getDb().select().from(labPanels).all().every((p) => p.source === "pdf_import")).toBe(
       true,
     );
+  });
+});
+
+describe("import pipeline", () => {
+  const sampleText =
+    "Lab Results CBC Collected 2026-03-01 WBC 6.2 K/uL ref 4.0-11.0 facility Quest";
+
+  it("startImportFromPdf marks job failed on PdfTextError", async () => {
+    const { jobId } = await startImportFromPdf({
+      originalFilename: "empty.pdf",
+      buffer: fakePdf(),
+      provider: "ollama",
+      model: "llama3.2",
+      deps: {
+        extractPdfText: async () => {
+          throw new PdfTextError("No text layer found", "EMPTY");
+        },
+        runExtract: vi.fn(async () => {
+          throw new Error("should not run extract after text failure");
+        }),
+      },
+    });
+
+    const job = getImportJob(jobId)!;
+    expect(job.status).toBe("failed");
+    expect(job.errorMessage).toMatch(/No text layer/i);
+    expect(job.extractedCharCount).toBeNull();
+  });
+
+  it("startImportFromPdf ollama path extracts and writes ready drafts", async () => {
+    const extractLabs = vi.fn(async () => sampleExtracted(1));
+    const fakeProvider: AIProvider = {
+      id: "ollama",
+      completeJson: async () => ({ panels: [] }),
+    };
+
+    const { jobId } = await startImportFromPdf({
+      originalFilename: "labs-ollama.pdf",
+      buffer: fakePdf(),
+      provider: "ollama",
+      model: "llama3.2",
+      deps: {
+        extractPdfText: async () => sampleText,
+        runExtract: async (id) =>
+          runExtractForJob(id, {
+            extractPdfText: async () => sampleText,
+            extractLabs,
+            getProvider: () => fakeProvider,
+          }),
+      },
+    });
+
+    const job = getImportJob(jobId)!;
+    expect(job.status).toBe("ready");
+    expect(job.extractedCharCount).toBe(sampleText.length);
+    expect(job.drafts).toHaveLength(1);
+    expect(job.drafts[0].name).toBe("CBC");
+    expect(job.drafts[0].results[0].analyteName).toBe("WBC");
+    expect(extractLabs).toHaveBeenCalledOnce();
+  });
+
+  it("startImportFromPdf grok path waits for cloud confirm then extracts", async () => {
+    const extractLabs = vi.fn(async () => sampleExtracted(1));
+    const fakeProvider: AIProvider = {
+      id: "grok",
+      completeJson: async () => ({ panels: [] }),
+    };
+    const runExtractSpy = vi.fn(async (id: string) =>
+      runExtractForJob(id, {
+        extractPdfText: async () => sampleText,
+        extractLabs,
+        getProvider: () => fakeProvider,
+      }),
+    );
+
+    const { jobId } = await startImportFromPdf({
+      originalFilename: "labs-grok.pdf",
+      buffer: fakePdf(),
+      provider: "grok",
+      model: "grok-4.5",
+      deps: {
+        extractPdfText: async () => sampleText,
+        runExtract: runExtractSpy,
+      },
+    });
+
+    let job = getImportJob(jobId)!;
+    expect(job.status).toBe("awaiting_cloud_confirm");
+    expect(job.extractedCharCount).toBe(sampleText.length);
+    expect(job.cloudConfirmedAt).toBeNull();
+    expect(job.drafts).toHaveLength(0);
+    expect(runExtractSpy).not.toHaveBeenCalled();
+
+    await confirmCloudAndExtract(jobId, { runExtract: runExtractSpy });
+
+    job = getImportJob(jobId)!;
+    expect(job.status).toBe("ready");
+    expect(job.cloudConfirmedAt).toBeTruthy();
+    expect(job.drafts).toHaveLength(1);
+    expect(job.drafts[0].name).toBe("CBC");
+    expect(runExtractSpy).toHaveBeenCalledOnce();
+    expect(extractLabs).toHaveBeenCalledOnce();
   });
 });

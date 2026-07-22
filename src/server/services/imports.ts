@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { eq, desc, asc } from "drizzle-orm";
 import { getDb, getSqlite } from "@/server/db";
 import { bootstrapDb } from "@/server/db/bootstrap";
@@ -9,6 +10,11 @@ import {
 } from "@/server/db/schema";
 import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/dates";
+import {
+  extractPdfText,
+  PdfTextError,
+  countExtractedChars,
+} from "@/lib/pdf-text";
 import {
   importProviderSchema,
   importJobStatusSchema,
@@ -22,8 +28,11 @@ import {
   labResultSchema,
   type LabResultInput,
 } from "@/lib/validation/lab";
+import { extractLabsFromText } from "@/server/ai/extract-labs";
+import { getAIProvider } from "@/server/ai/router";
 import { createLabPanel } from "@/server/services/labs";
-import { linkDocument } from "@/server/services/documents";
+import { linkDocument, savePdfDocument, getDocumentFilePath } from "@/server/services/documents";
+import { getAiSettings } from "@/server/services/settings";
 
 const OPEN_STATUSES = [
   "pending",
@@ -468,5 +477,165 @@ export function recomputeJobCompletion(jobId: string): void {
       .where(eq(importJobs.id, jobId))
       .run();
   }
+}
+
+/** After PDF saved: create job, extract text layer, then branch on provider. */
+export async function startImportFromPdf(opts: {
+  originalFilename: string;
+  buffer: Buffer;
+  provider: "grok" | "ollama";
+  model?: string;
+  /** test injection */
+  deps?: {
+    extractPdfText?: typeof extractPdfText;
+    runExtract?: typeof runExtractForJob;
+  };
+}): Promise<{ jobId: string }> {
+  bootstrapDb();
+  const provider = importProviderSchema.parse(opts.provider);
+  const settings = getAiSettings();
+  const model =
+    (opts.model?.trim() ||
+      (provider === "grok" ? settings.grokModel : settings.ollamaModel)).trim();
+  if (!model) throw new Error("Model is required");
+
+  const doc = savePdfDocument({
+    originalFilename: opts.originalFilename,
+    buffer: opts.buffer,
+    uploadedVia: "ai_import",
+  });
+
+  const job = createImportJob({
+    documentId: doc.id,
+    provider,
+    model,
+  });
+
+  const extractText = opts.deps?.extractPdfText ?? extractPdfText;
+  let text: string;
+  try {
+    text = await extractText(opts.buffer);
+  } catch (e) {
+    const message =
+      e instanceof PdfTextError
+        ? e.message
+        : e instanceof Error
+          ? e.message
+          : "PDF text extraction failed";
+    setJobStatus(job.id, "failed", { errorMessage: message });
+    return { jobId: job.id };
+  }
+
+  const extractedCharCount = countExtractedChars(text);
+
+  if (provider === "grok") {
+    setJobStatus(job.id, "awaiting_cloud_confirm", { extractedCharCount });
+    return { jobId: job.id };
+  }
+
+  setJobStatus(job.id, "pending", { extractedCharCount });
+  const runExtract = opts.deps?.runExtract ?? runExtractForJob;
+  await runExtract(job.id);
+  return { jobId: job.id };
+}
+
+export async function confirmCloudAndExtract(
+  jobId: string,
+  deps?: {
+    runExtract?: typeof runExtractForJob;
+  },
+): Promise<void> {
+  bootstrapDb();
+  const job = getDb().select().from(importJobs).where(eq(importJobs.id, jobId)).get();
+  if (!job) throw new Error(`Import job not found: ${jobId}`);
+  if (job.status !== "awaiting_cloud_confirm") {
+    throw new Error(`Job is not awaiting cloud confirmation (status: ${job.status})`);
+  }
+  if (job.provider !== "grok") {
+    throw new Error("Cloud confirmation is only required for Grok imports");
+  }
+
+  setJobStatus(jobId, "awaiting_cloud_confirm", {
+    cloudConfirmedAt: nowIso(),
+  });
+
+  const runExtract = deps?.runExtract ?? runExtractForJob;
+  await runExtract(jobId);
+}
+
+export async function runExtractForJob(
+  jobId: string,
+  deps?: {
+    extractPdfText?: (buf: Buffer) => Promise<string>;
+    extractLabs?: typeof extractLabsFromText;
+    getProvider?: typeof getAIProvider;
+  },
+): Promise<void> {
+  bootstrapDb();
+  const job = getDb().select().from(importJobs).where(eq(importJobs.id, jobId)).get();
+  if (!job) throw new Error(`Import job not found: ${jobId}`);
+
+  setJobStatus(jobId, "extracting", { errorMessage: null });
+
+  try {
+    const filePath = getDocumentFilePath(job.documentId);
+    if (!filePath || !fs.existsSync(filePath)) {
+      throw new Error("Import document file is missing on disk");
+    }
+    const buffer = fs.readFileSync(filePath);
+
+    const extractText = deps?.extractPdfText ?? extractPdfText;
+    const text = await extractText(buffer);
+
+    const settings = getAiSettings();
+    const getProvider = deps?.getProvider ?? getAIProvider;
+    const provider = getProvider(
+      job.provider as "grok" | "ollama",
+      settings.ollamaBaseUrl,
+    );
+
+    const extractLabs = deps?.extractLabs ?? extractLabsFromText;
+    const extracted = await extractLabs({
+      text,
+      provider,
+      model: job.model,
+    });
+
+    writeDraftsFromExtracted(jobId, extracted);
+    setJobStatus(jobId, "ready", { errorMessage: null });
+  } catch (e) {
+    const message =
+      e instanceof PdfTextError
+        ? e.message
+        : e instanceof Error
+          ? e.message
+          : "Lab extraction failed";
+    setJobStatus(jobId, "failed", { errorMessage: message });
+  }
+}
+
+export async function retryFailedJob(
+  jobId: string,
+  deps?: {
+    runExtract?: typeof runExtractForJob;
+  },
+): Promise<void> {
+  bootstrapDb();
+  const job = getDb().select().from(importJobs).where(eq(importJobs.id, jobId)).get();
+  if (!job) throw new Error(`Import job not found: ${jobId}`);
+  if (job.status !== "failed") {
+    throw new Error(`Can only retry failed jobs (status: ${job.status})`);
+  }
+
+  // Clear previous error
+  setJobStatus(jobId, "failed", { errorMessage: null });
+
+  if (job.provider === "grok" && !job.cloudConfirmedAt) {
+    setJobStatus(jobId, "awaiting_cloud_confirm", { errorMessage: null });
+    return;
+  }
+
+  const runExtract = deps?.runExtract ?? runExtractForJob;
+  await runExtract(jobId);
 }
 
