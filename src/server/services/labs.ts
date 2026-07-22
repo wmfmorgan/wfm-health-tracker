@@ -6,6 +6,7 @@ import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/dates";
 import type { LabPanelInput, LabResultInput } from "@/lib/validation/lab";
 import { unlinkAllForEntity } from "@/server/services/documents";
+import { ensureAnalyte } from "@/server/services/analytes";
 
 export function listLabPanels(filter?: { q?: string }) {
   bootstrapDb();
@@ -69,6 +70,7 @@ export function createLabPanel(panelInput: LabPanelInput, results: LabResultInpu
       .run();
 
     for (const r of results) {
+      ensureAnalyte(r.analyteName, r.unit);
       db.insert(labResults)
         .values({
           id: newId(),
@@ -121,6 +123,7 @@ export function updateLabPanel(
     db.delete(labResults).where(eq(labResults.panelId, id)).run();
 
     for (const r of results) {
+      ensureAnalyte(r.analyteName, r.unit);
       db.insert(labResults)
         .values({
           id: newId(),

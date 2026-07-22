@@ -12,6 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  FacilitySelect,
+  ProviderSelect,
+} from "@/components/records/provider-select";
+import {
+  listActiveProviders,
+  listFacilityOptions,
+} from "@/server/services/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +37,8 @@ export default async function ProcedureDetailPage({
   const procedure = getProcedure(id);
   if (!procedure) notFound();
   const documents = listDocumentsForEntity("procedure", procedure.id);
+  const providers = listActiveProviders();
+  const facilities = listFacilityOptions();
 
   return (
     <div className="text-zinc-900">
@@ -73,19 +83,19 @@ export default async function ProcedureDetailPage({
 
           <Label>
             Clinician
-            <Input
+            <ProviderSelect
               name="clinician"
-              maxLength={200}
-              defaultValue={procedure.clinician ?? ""}
+              providers={providers}
+              defaultValue={procedure.clinician}
             />
           </Label>
 
           <Label className="sm:col-span-2">
             Facility
-            <Input
+            <FacilitySelect
               name="facility"
-              maxLength={200}
-              defaultValue={procedure.facility ?? ""}
+              facilities={facilities}
+              defaultValue={procedure.facility}
             />
           </Label>
         </div>

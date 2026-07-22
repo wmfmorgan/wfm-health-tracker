@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { createDiagnosisAction } from "@/server/actions/diagnoses";
+import {
+  listActiveProviders,
+  listFacilityOptions,
+} from "@/server/services/providers";
+import {
+  FacilitySelect,
+  ProviderSelect,
+} from "@/components/records/provider-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +16,14 @@ import { Textarea } from "@/components/ui/textarea";
 
 export const dynamic = "force-dynamic";
 
-/** React form `action` types expect void; keep structured action results for callers. */
 function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) => Promise<void> {
   return fn as (formData: FormData) => Promise<void>;
 }
 
 export default function NewDiagnosisPage() {
+  const providers = listActiveProviders();
+  const facilities = listFacilityOptions();
+
   return (
     <div className="text-zinc-900">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -22,6 +32,16 @@ export default function NewDiagnosisPage() {
           Back to list
         </Link>
       </div>
+
+      {providers.length === 0 ? (
+        <p className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          No providers yet.{" "}
+          <Link href="/providers/new" className="underline">
+            Add providers
+          </Link>{" "}
+          to fill clinician/facility dropdowns.
+        </p>
+      ) : null}
 
       <form
         action={asFormAction(createDiagnosisAction)}
@@ -54,12 +74,12 @@ export default function NewDiagnosisPage() {
 
           <Label>
             Clinician
-            <Input name="clinician" maxLength={200} />
+            <ProviderSelect name="clinician" providers={providers} />
           </Label>
 
           <Label className="sm:col-span-2">
             Facility
-            <Input name="facility" maxLength={200} />
+            <FacilitySelect name="facility" facilities={facilities} />
           </Label>
         </div>
 

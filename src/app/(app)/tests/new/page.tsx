@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FacilitySelect } from "@/components/records/provider-select";
+import { listFacilityOptions } from "@/server/services/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,8 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 }
 
 export default function NewTestPage() {
+  const facilities = listFacilityOptions();
+
   return (
     <div className="text-zinc-900">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -54,7 +58,7 @@ export default function NewTestPage() {
 
           <Label className="sm:col-span-2">
             Facility
-            <Input name="facility" maxLength={200} />
+            <FacilitySelect name="facility" facilities={facilities} />
           </Label>
         </div>
 

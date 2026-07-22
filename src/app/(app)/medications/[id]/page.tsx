@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ProviderSelect } from "@/components/records/provider-select";
+import { listActiveProviders } from "@/server/services/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ export default async function MedicationDetailPage({
   const medication = getMedication(id);
   if (!medication) notFound();
   const documents = listDocumentsForEntity("medication", medication.id);
+  const providers = listActiveProviders();
 
   return (
     <div className="text-zinc-900">
@@ -131,10 +134,10 @@ export default async function MedicationDetailPage({
 
           <Label>
             Prescriber
-            <Input
+            <ProviderSelect
               name="prescriber"
-              maxLength={200}
-              defaultValue={medication.prescriber ?? ""}
+              providers={providers}
+              defaultValue={medication.prescriber}
             />
           </Label>
         </div>

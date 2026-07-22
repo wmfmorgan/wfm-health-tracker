@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FacilitySelect } from "@/components/records/provider-select";
+import { listFacilityOptions } from "@/server/services/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ export default async function TestDetailPage({
   const test = getClinicalTest(id);
   if (!test) notFound();
   const documents = listDocumentsForEntity("test", test.id);
+  const facilities = listFacilityOptions();
 
   return (
     <div className="text-zinc-900">
@@ -88,10 +91,10 @@ export default async function TestDetailPage({
 
           <Label className="sm:col-span-2">
             Facility
-            <Input
+            <FacilitySelect
               name="facility"
-              maxLength={200}
-              defaultValue={test.facility ?? ""}
+              facilities={facilities}
+              defaultValue={test.facility}
             />
           </Label>
         </div>

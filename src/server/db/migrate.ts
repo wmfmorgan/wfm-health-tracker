@@ -152,6 +152,26 @@ export function migrate() {
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS providers (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    specialty TEXT,
+    organization TEXT,
+    phone TEXT,
+    email TEXT,
+    notes TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS analytes (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    default_unit TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]!).href) {

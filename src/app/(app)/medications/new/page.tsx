@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ProviderSelect } from "@/components/records/provider-select";
+import { listActiveProviders } from "@/server/services/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,8 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 }
 
 export default function NewMedicationPage() {
+  const providers = listActiveProviders();
+
   return (
     <div className="text-zinc-900">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -88,7 +92,7 @@ export default function NewMedicationPage() {
 
           <Label>
             Prescriber
-            <Input name="prescriber" maxLength={200} />
+            <ProviderSelect name="prescriber" providers={providers} />
           </Label>
         </div>
 

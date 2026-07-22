@@ -15,6 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FacilitySelect } from "@/components/records/provider-select";
+import { listFacilityOptions } from "@/server/services/providers";
+import { listAnalytes } from "@/server/services/analytes";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +41,11 @@ export default async function LabPanelDetailPage({
   const panel = getLabPanel(id);
   if (!panel) notFound();
   const documents = listDocumentsForEntity("lab_panel", panel.id);
+  const facilities = listFacilityOptions();
+  const analytes = listAnalytes().map((a) => ({
+    name: a.name,
+    defaultUnit: a.defaultUnit,
+  }));
 
   const initialResults = panel.results.map((r) => ({
     analyteName: r.analyteName,
@@ -98,10 +106,10 @@ export default async function LabPanelDetailPage({
 
           <Label className="sm:col-span-2">
             Facility
-            <Input
+            <FacilitySelect
               name="facility"
-              maxLength={200}
-              defaultValue={panel.facility ?? ""}
+              facilities={facilities}
+              defaultValue={panel.facility}
             />
           </Label>
         </div>
@@ -116,7 +124,7 @@ export default async function LabPanelDetailPage({
           />
         </Label>
 
-        <LabResultsEditor initialResults={initialResults} />
+        <LabResultsEditor initialResults={initialResults} analytes={analytes} />
 
         <div className="flex gap-2 pt-2">
           <Button type="submit">Save changes</Button>

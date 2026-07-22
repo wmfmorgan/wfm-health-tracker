@@ -25,9 +25,16 @@ export default async function LabsPage({
     <div className="text-zinc-900">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Labs</h1>
-        <Link href="/labs/new">
-          <Button type="button">Add lab panel</Button>
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/analytes">
+            <Button type="button" variant="secondary">
+              Manage analytes
+            </Button>
+          </Link>
+          <Link href="/labs/new">
+            <Button type="button">Add lab panel</Button>
+          </Link>
+        </div>
       </div>
 
       <form method="get" className="mb-4 flex flex-wrap gap-2">

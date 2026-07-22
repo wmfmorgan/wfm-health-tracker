@@ -167,3 +167,27 @@ export const appSettings = sqliteTable("app_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 });
+
+/** Care team / facilities referenced by clinical form dropdowns */
+export const providers = sqliteTable("providers", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  specialty: text("specialty"),
+  organization: text("organization"), // facility / practice name
+  phone: text("phone"),
+  email: text("email"),
+  notes: text("notes"),
+  status: text("status").notNull().default("active"), // active | inactive
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+/** Master list of lab analytes for consistent naming over time */
+export const analytes = sqliteTable("analytes", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  defaultUnit: text("default_unit"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});

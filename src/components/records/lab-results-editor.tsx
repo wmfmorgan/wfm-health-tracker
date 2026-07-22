@@ -16,6 +16,11 @@ export type LabResultRow = {
   notes: string;
 };
 
+export type AnalyteOption = {
+  name: string;
+  defaultUnit: string | null;
+};
+
 const EMPTY_ROW = (): LabResultRow => ({
   analyteName: "",
   value: "",
@@ -27,16 +32,30 @@ const EMPTY_ROW = (): LabResultRow => ({
 });
 
 const FLAGS = ["", "normal", "H", "L", "critical", "unknown"] as const;
+const NEW_ANALYTE = "__new__";
 
 type Props = {
   initialResults?: LabResultRow[];
+  analytes?: AnalyteOption[];
 };
 
-export function LabResultsEditor({ initialResults }: Props) {
+export function LabResultsEditor({ initialResults, analytes = [] }: Props) {
   const [rows, setRows] = useState<LabResultRow[]>(() =>
     initialResults && initialResults.length > 0
       ? initialResults.map((r) => ({ ...r }))
       : [EMPTY_ROW()],
+  );
+  /** Per-row: using free-text for a new analyte */
+  const [newMode, setNewMode] = useState<boolean[]>(() =>
+    (initialResults && initialResults.length > 0
+      ? initialResults
+      : [EMPTY_ROW()]
+    ).map((r) => {
+      if (!r.analyteName) return false;
+      return !analytes.some(
+        (a) => a.name.toLowerCase() === r.analyteName.toLowerCase(),
+      );
+    }),
   );
 
   const resultsJson = useMemo(
@@ -61,13 +80,42 @@ export function LabResultsEditor({ initialResults }: Props) {
     setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
+  function setRowNewMode(index: number, isNew: boolean) {
+    setNewMode((prev) => {
+      const next = [...prev];
+      while (next.length <= index) next.push(false);
+      next[index] = isNew;
+      return next;
+    });
+  }
+
+  function onAnalyteSelect(index: number, value: string) {
+    if (value === NEW_ANALYTE) {
+      setRowNewMode(index, true);
+      updateRow(index, { analyteName: "" });
+      return;
+    }
+    setRowNewMode(index, false);
+    const match = analytes.find((a) => a.name === value);
+    const row = rows[index];
+    updateRow(index, {
+      analyteName: value,
+      unit: row?.unit?.trim() ? row.unit : (match?.defaultUnit ?? ""),
+    });
+  }
+
   function addRow() {
     setRows((prev) => [...prev, EMPTY_ROW()]);
+    setNewMode((prev) => [...prev, false]);
   }
 
   function removeRow(index: number) {
     setRows((prev) => {
       if (prev.length <= 1) return [EMPTY_ROW()];
+      return prev.filter((_, i) => i !== index);
+    });
+    setNewMode((prev) => {
+      if (prev.length <= 1) return [false];
       return prev.filter((_, i) => i !== index);
     });
   }
@@ -84,97 +132,151 @@ export function LabResultsEditor({ initialResults }: Props) {
       <input type="hidden" name="resultsJson" value={resultsJson} />
 
       <div className="space-y-3">
-        {rows.map((row, index) => (
-          <div
-            key={index}
-            className="rounded-md border border-zinc-200 bg-zinc-50 p-3 space-y-3"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-xs font-medium text-zinc-500">Row {index + 1}</p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeRow(index)}
-              >
-                Remove
-              </Button>
-            </div>
+        {rows.map((row, index) => {
+          const isNew = newMode[index] ?? false;
+          const selectValue = isNew
+            ? NEW_ANALYTE
+            : analytes.some((a) => a.name === row.analyteName)
+              ? row.analyteName
+              : row.analyteName
+                ? row.analyteName
+                : "";
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Label className="sm:col-span-2">
-                Analyte
-                <Input
-                  value={row.analyteName}
-                  onChange={(e) => updateRow(index, { analyteName: e.target.value })}
-                  maxLength={200}
-                  placeholder="e.g. WBC"
-                  required={rows.length === 1 && !!row.analyteName}
-                />
-              </Label>
-
-              <Label>
-                Value
-                <Input
-                  value={row.value}
-                  onChange={(e) => updateRow(index, { value: e.target.value })}
-                  maxLength={100}
-                />
-              </Label>
-
-              <Label>
-                Unit
-                <Input
-                  value={row.unit}
-                  onChange={(e) => updateRow(index, { unit: e.target.value })}
-                  maxLength={50}
-                  placeholder="e.g. g/dL"
-                />
-              </Label>
-
-              <Label>
-                Ref low
-                <Input
-                  value={row.refLow}
-                  onChange={(e) => updateRow(index, { refLow: e.target.value })}
-                  maxLength={50}
-                />
-              </Label>
-
-              <Label>
-                Ref high
-                <Input
-                  value={row.refHigh}
-                  onChange={(e) => updateRow(index, { refHigh: e.target.value })}
-                  maxLength={50}
-                />
-              </Label>
-
-              <Label>
-                Flag
-                <Select
-                  value={row.flag}
-                  onChange={(e) => updateRow(index, { flag: e.target.value })}
+          return (
+            <div
+              key={index}
+              className="rounded-md border border-zinc-200 bg-zinc-50 p-3 space-y-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-medium text-zinc-500">Row {index + 1}</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeRow(index)}
                 >
-                  {FLAGS.map((f) => (
-                    <option key={f || "none"} value={f}>
-                      {f || "—"}
-                    </option>
-                  ))}
-                </Select>
-              </Label>
+                  Remove
+                </Button>
+              </div>
 
-              <Label>
-                Notes
-                <Input
-                  value={row.notes}
-                  onChange={(e) => updateRow(index, { notes: e.target.value })}
-                  maxLength={2000}
-                />
-              </Label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Label className="sm:col-span-2">
+                  Analyte
+                  <Select
+                    value={
+                      isNew
+                        ? NEW_ANALYTE
+                        : selectValue &&
+                            !analytes.some((a) => a.name === selectValue)
+                          ? ""
+                          : selectValue
+                    }
+                    onChange={(e) => onAnalyteSelect(index, e.target.value)}
+                  >
+                    <option value="">— Select analyte —</option>
+                    {row.analyteName &&
+                    !isNew &&
+                    !analytes.some((a) => a.name === row.analyteName) ? (
+                      <option value={row.analyteName}>
+                        {row.analyteName} (not in list)
+                      </option>
+                    ) : null}
+                    {analytes.map((a) => (
+                      <option key={a.name} value={a.name}>
+                        {a.name}
+                        {a.defaultUnit ? ` (${a.defaultUnit})` : ""}
+                      </option>
+                    ))}
+                    <option value={NEW_ANALYTE}>+ Add new analyte…</option>
+                  </Select>
+                </Label>
+
+                {isNew ||
+                (row.analyteName &&
+                  !analytes.some((a) => a.name === row.analyteName) &&
+                  !isNew) ? (
+                  <Label className="sm:col-span-2">
+                    {isNew ? "New analyte name" : "Analyte name"}
+                    <Input
+                      value={row.analyteName}
+                      onChange={(e) =>
+                        updateRow(index, { analyteName: e.target.value })
+                      }
+                      maxLength={200}
+                      placeholder="e.g. CRP"
+                      required
+                    />
+                  </Label>
+                ) : null}
+
+                {/* Keep selected name for non-new rows without free text */}
+                {!isNew && row.analyteName ? (
+                  <input type="hidden" value={row.analyteName} readOnly aria-hidden />
+                ) : null}
+
+                <Label>
+                  Value
+                  <Input
+                    value={row.value}
+                    onChange={(e) => updateRow(index, { value: e.target.value })}
+                    maxLength={100}
+                  />
+                </Label>
+
+                <Label>
+                  Unit
+                  <Input
+                    value={row.unit}
+                    onChange={(e) => updateRow(index, { unit: e.target.value })}
+                    maxLength={50}
+                    placeholder="e.g. g/dL"
+                  />
+                </Label>
+
+                <Label>
+                  Ref low
+                  <Input
+                    value={row.refLow}
+                    onChange={(e) => updateRow(index, { refLow: e.target.value })}
+                    maxLength={50}
+                  />
+                </Label>
+
+                <Label>
+                  Ref high
+                  <Input
+                    value={row.refHigh}
+                    onChange={(e) => updateRow(index, { refHigh: e.target.value })}
+                    maxLength={50}
+                  />
+                </Label>
+
+                <Label>
+                  Flag
+                  <Select
+                    value={row.flag}
+                    onChange={(e) => updateRow(index, { flag: e.target.value })}
+                  >
+                    {FLAGS.map((f) => (
+                      <option key={f || "none"} value={f}>
+                        {f || "—"}
+                      </option>
+                    ))}
+                  </Select>
+                </Label>
+
+                <Label>
+                  Notes
+                  <Input
+                    value={row.notes}
+                    onChange={(e) => updateRow(index, { notes: e.target.value })}
+                    maxLength={2000}
+                  />
+                </Label>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
