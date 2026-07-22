@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { FacilitySelect } from "@/components/records/provider-select";
+import { DiagnosisSelect } from "@/components/records/diagnosis-select";
 import { listFacilityOptions } from "@/server/services/providers";
+import { listDiagnosesForSelect } from "@/server/services/diagnoses";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,7 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 
 export default function NewTestPage() {
   const facilities = listFacilityOptions();
+  const diagnoses = listDiagnosesForSelect();
 
   return (
     <div className="text-zinc-900">
@@ -56,9 +59,14 @@ export default function NewTestPage() {
             <Input name="performedOn" type="date" />
           </Label>
 
-          <Label className="sm:col-span-2">
+          <Label>
             Facility
             <FacilitySelect name="facility" facilities={facilities} />
+          </Label>
+
+          <Label>
+            Related diagnosis
+            <DiagnosisSelect name="diagnosis" diagnoses={diagnoses} />
           </Label>
         </div>
 

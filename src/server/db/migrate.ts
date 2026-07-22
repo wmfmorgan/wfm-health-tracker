@@ -111,6 +111,7 @@ export function migrate() {
     name TEXT NOT NULL,
     performed_on TEXT,
     facility TEXT,
+    diagnosis TEXT,
     summary TEXT,
     key_findings TEXT,
     notes TEXT,
@@ -180,6 +181,7 @@ export function migrate() {
   ensureColumn("medications", "how_it_helps", "TEXT");
   ensureColumn("supplements", "how_it_helps", "TEXT");
   ensureColumn("supplements", "prescriber", "TEXT");
+  ensureColumn("tests", "diagnosis", "TEXT");
 }
 
 function ensureColumn(table: string, column: string, typeSql: string) {

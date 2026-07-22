@@ -15,6 +15,7 @@ function parseClinicalTestForm(formData: FormData) {
     ...raw,
     performedOn: raw.performedOn === "" ? null : raw.performedOn,
     facility: raw.facility === "" ? null : raw.facility,
+    diagnosis: raw.diagnosis === "" ? null : raw.diagnosis,
     summary: raw.summary === "" ? null : raw.summary,
     keyFindings: raw.keyFindings === "" ? null : raw.keyFindings,
     notes: raw.notes === "" ? null : raw.notes,

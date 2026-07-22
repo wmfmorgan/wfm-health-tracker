@@ -114,6 +114,7 @@ export const tests = sqliteTable("tests", {
   name: text("name").notNull(),
   performedOn: text("performed_on"),
   facility: text("facility"),
+  diagnosis: text("diagnosis"), // related diagnosis name
   summary: text("summary"),
   keyFindings: text("key_findings"),
   notes: text("notes"),

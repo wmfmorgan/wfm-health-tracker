@@ -43,4 +43,14 @@ describe("clinical tests service", () => {
     expect(listClinicalTests({ type: "imaging" })).toHaveLength(1);
     expect(listClinicalTests({ q: "biopsy" })).toHaveLength(1);
   });
+
+  it("associates a diagnosis", () => {
+    const row = createClinicalTest({
+      type: "imaging",
+      name: "Colonoscopy",
+      diagnosis: "Ulcerative colitis",
+    });
+    expect(getClinicalTest(row.id)?.diagnosis).toBe("Ulcerative colitis");
+    expect(listClinicalTests({ q: "ulcerative" })).toHaveLength(1);
+  });
 });
