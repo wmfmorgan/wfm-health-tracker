@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLabPanel } from "@/server/services/labs";
+import { listDocumentsForEntity } from "@/server/services/documents";
 import {
   updateLabPanelAction,
   deleteLabPanelAction,
 } from "@/server/actions/labs";
+import { AttachmentsPanel } from "@/components/records/attachments-panel";
 import { LabResultsEditor } from "@/components/records/lab-results-editor";
 import { ConfirmDeleteButton } from "@/components/records/confirm-delete-button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +37,7 @@ export default async function LabPanelDetailPage({
   const { id } = await params;
   const panel = getLabPanel(id);
   if (!panel) notFound();
+  const documents = listDocumentsForEntity("lab_panel", panel.id);
 
   const initialResults = panel.results.map((r) => ({
     analyteName: r.analyteName,
@@ -125,12 +128,11 @@ export default async function LabPanelDetailPage({
         </div>
       </form>
 
-      <section className="max-w-2xl rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-5">
-        <h2 className="mb-1 text-sm font-medium text-zinc-700">Attachments</h2>
-        <p className="text-sm text-zinc-500">
-          Document attachments will be available in a later update.
-        </p>
-      </section>
+      <AttachmentsPanel
+        entityType="lab_panel"
+        entityId={panel.id}
+        initialDocuments={documents}
+      />
     </div>
   );
 }

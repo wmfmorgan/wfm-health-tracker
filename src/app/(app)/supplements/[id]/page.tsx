@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupplement } from "@/server/services/supplements";
+import { listDocumentsForEntity } from "@/server/services/documents";
 import {
   updateSupplementAction,
   deleteSupplementAction,
 } from "@/server/actions/supplements";
+import { AttachmentsPanel } from "@/components/records/attachments-panel";
 import { ConfirmDeleteButton } from "@/components/records/confirm-delete-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,7 @@ export default async function SupplementDetailPage({
   const { id } = await params;
   const supplement = getSupplement(id);
   if (!supplement) notFound();
+  const documents = listDocumentsForEntity("supplement", supplement.id);
 
   return (
     <div className="text-zinc-900">
@@ -147,13 +150,11 @@ export default async function SupplementDetailPage({
         </div>
       </form>
 
-      {/* Attachments panel wired in Task 10 */}
-      <section className="max-w-2xl rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-5">
-        <h2 className="mb-1 text-sm font-medium text-zinc-700">Attachments</h2>
-        <p className="text-sm text-zinc-500">
-          Document attachments will be available in a later update.
-        </p>
-      </section>
+      <AttachmentsPanel
+        entityType="supplement"
+        entityId={supplement.id}
+        initialDocuments={documents}
+      />
     </div>
   );
 }

@@ -105,6 +105,20 @@ export function listAllDocuments() {
   return getDb().select().from(documents).orderBy(desc(documents.createdAt)).all();
 }
 
+export function listLinksForDocument(documentId: string) {
+  bootstrapDb();
+  return getDb()
+    .select()
+    .from(documentLinks)
+    .where(eq(documentLinks.documentId, documentId))
+    .all();
+}
+
+export function listAllDocumentLinks() {
+  bootstrapDb();
+  return getDb().select().from(documentLinks).all();
+}
+
 export function getDocumentFilePath(id: string): string | null {
   bootstrapDb();
   const doc = getDb().select().from(documents).where(eq(documents.id, id)).get();

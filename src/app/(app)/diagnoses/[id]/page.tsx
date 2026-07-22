@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDiagnosis } from "@/server/services/diagnoses";
+import { listDocumentsForEntity } from "@/server/services/documents";
 import {
   updateDiagnosisAction,
   deleteDiagnosisAction,
 } from "@/server/actions/diagnoses";
+import { AttachmentsPanel } from "@/components/records/attachments-panel";
 import { ConfirmDeleteButton } from "@/components/records/confirm-delete-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,7 @@ export default async function DiagnosisDetailPage({
   const { id } = await params;
   const diagnosis = getDiagnosis(id);
   if (!diagnosis) notFound();
+  const documents = listDocumentsForEntity("diagnosis", diagnosis.id);
 
   return (
     <div className="text-zinc-900">
@@ -137,13 +140,11 @@ export default async function DiagnosisDetailPage({
         </div>
       </form>
 
-      {/* Attachments panel wired in Task 10 */}
-      <section className="max-w-2xl rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-5">
-        <h2 className="mb-1 text-sm font-medium text-zinc-700">Attachments</h2>
-        <p className="text-sm text-zinc-500">
-          Document attachments will be available in a later update.
-        </p>
-      </section>
+      <AttachmentsPanel
+        entityType="diagnosis"
+        entityId={diagnosis.id}
+        initialDocuments={documents}
+      />
     </div>
   );
 }
