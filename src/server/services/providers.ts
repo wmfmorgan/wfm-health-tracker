@@ -32,12 +32,27 @@ export function listProviders(filter?: { status?: string; q?: string }) {
   return query.where(and(...conditions)).all();
 }
 
-/** Active providers for clinical form dropdowns */
+/** Active providers only (list filters / dashboards). */
 export function listActiveProviders() {
   return listProviders({ status: "active" });
 }
 
-/** Distinct facility/organization names from the provider list */
+/**
+ * All providers for clinical form dropdowns (active + inactive).
+ * Historical records often reference doctors you no longer see.
+ * Sorted: active first (by name), then inactive (by name).
+ */
+export function listProvidersForSelect() {
+  const all = listProviders();
+  return [...all].sort((a, b) => {
+    if (a.status !== b.status) {
+      return a.status === "active" ? -1 : 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
+/** Distinct facility/organization names from the full provider list (any status) */
 export function listFacilityOptions(): string[] {
   bootstrapDb();
   const rows = getDb().select({ organization: providers.organization }).from(providers).all();

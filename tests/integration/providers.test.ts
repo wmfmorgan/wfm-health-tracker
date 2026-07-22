@@ -3,6 +3,7 @@ import { useFreshDb } from "../helpers/test-db";
 import {
   createProvider,
   listActiveProviders,
+  listProvidersForSelect,
   listFacilityOptions,
   deleteProvider,
   updateProvider,
@@ -33,6 +34,18 @@ describe("providers", () => {
     expect(active).toHaveLength(1);
     expect(active[0].name).toBe("Dr. GI");
     expect(listFacilityOptions()).toEqual(["City Hospital"]);
+  });
+
+  it("includes inactive providers in form select list", () => {
+    createProvider({ name: "Current MD", status: "active" });
+    createProvider({ name: "Former MD", status: "inactive" });
+    const forSelect = listProvidersForSelect();
+    expect(forSelect.map((p) => p.name)).toEqual(
+      expect.arrayContaining(["Current MD", "Former MD"]),
+    );
+    // active first
+    expect(forSelect[0].status).toBe("active");
+    expect(forSelect.some((p) => p.status === "inactive")).toBe(true);
   });
 
   it("updates and deletes", () => {

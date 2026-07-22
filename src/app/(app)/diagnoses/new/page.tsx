@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createDiagnosisAction } from "@/server/actions/diagnoses";
 import {
-  listActiveProviders,
+  listProvidersForSelect,
   listFacilityOptions,
 } from "@/server/services/providers";
 import {
@@ -21,7 +21,7 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 }
 
 export default function NewDiagnosisPage() {
-  const providers = listActiveProviders();
+  const providers = listProvidersForSelect();
   const facilities = listFacilityOptions();
 
   return (

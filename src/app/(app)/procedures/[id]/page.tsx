@@ -17,7 +17,7 @@ import {
   ProviderSelect,
 } from "@/components/records/provider-select";
 import {
-  listActiveProviders,
+  listProvidersForSelect,
   listFacilityOptions,
 } from "@/server/services/providers";
 
@@ -37,7 +37,7 @@ export default async function ProcedureDetailPage({
   const procedure = getProcedure(id);
   if (!procedure) notFound();
   const documents = listDocumentsForEntity("procedure", procedure.id);
-  const providers = listActiveProviders();
+  const providers = listProvidersForSelect();
   const facilities = listFacilityOptions();
 
   return (

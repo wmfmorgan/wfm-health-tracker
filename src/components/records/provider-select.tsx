@@ -5,6 +5,7 @@ export type ProviderOption = {
   name: string;
   specialty: string | null;
   organization: string | null;
+  status?: string | null;
 };
 
 type Props = {
@@ -17,8 +18,18 @@ type Props = {
   className?: string;
 };
 
+function providerLabel(p: ProviderOption): string {
+  const parts = [p.name, p.specialty, p.organization].filter(Boolean);
+  let label = parts.join(" · ");
+  if (p.status === "inactive") {
+    label = `${label} (inactive)`;
+  }
+  return label;
+}
+
 /**
- * Dropdown of care-team providers. Value submitted is the provider display name
+ * Dropdown of care-team providers (active and inactive).
+ * Value submitted is the provider display name
  * (matches existing free-text clinician/prescriber columns).
  */
 export function ProviderSelect({
@@ -33,6 +44,9 @@ export function ProviderSelect({
   const known = new Set(providers.map((p) => p.name));
   const orphan = current && !known.has(current) ? current : null;
 
+  const active = providers.filter((p) => p.status !== "inactive");
+  const inactive = providers.filter((p) => p.status === "inactive");
+
   return (
     <Select name={name} defaultValue={current} required={required} className={className}>
       <option value="">{emptyLabel}</option>
@@ -41,14 +55,20 @@ export function ProviderSelect({
           {orphan} (not in list)
         </option>
       ) : null}
-      {providers.map((p) => {
-        const label = [p.name, p.specialty, p.organization].filter(Boolean).join(" · ");
-        return (
-          <option key={p.id} value={p.name}>
-            {label}
-          </option>
-        );
-      })}
+      {active.map((p) => (
+        <option key={p.id} value={p.name}>
+          {providerLabel(p)}
+        </option>
+      ))}
+      {inactive.length > 0 ? (
+        <optgroup label="Inactive / former">
+          {inactive.map((p) => (
+            <option key={p.id} value={p.name}>
+              {providerLabel(p)}
+            </option>
+          ))}
+        </optgroup>
+      ) : null}
     </Select>
   );
 }

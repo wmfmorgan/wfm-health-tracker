@@ -9,7 +9,7 @@ import {
   ProviderSelect,
 } from "@/components/records/provider-select";
 import {
-  listActiveProviders,
+  listProvidersForSelect,
   listFacilityOptions,
 } from "@/server/services/providers";
 
@@ -21,7 +21,7 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 }
 
 export default function NewProcedurePage() {
-  const providers = listActiveProviders();
+  const providers = listProvidersForSelect();
   const facilities = listFacilityOptions();
 
   return (

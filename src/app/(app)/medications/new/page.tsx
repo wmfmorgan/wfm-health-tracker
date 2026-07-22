@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ProviderSelect } from "@/components/records/provider-select";
-import { listActiveProviders } from "@/server/services/providers";
+import { listProvidersForSelect } from "@/server/services/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 }
 
 export default function NewMedicationPage() {
-  const providers = listActiveProviders();
+  const providers = listProvidersForSelect();
 
   return (
     <div className="text-zinc-900">

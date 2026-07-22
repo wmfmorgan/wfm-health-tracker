@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ProviderSelect } from "@/components/records/provider-select";
-import { listActiveProviders } from "@/server/services/providers";
+import { listProvidersForSelect } from "@/server/services/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,7 @@ export default async function MedicationDetailPage({
   const medication = getMedication(id);
   if (!medication) notFound();
   const documents = listDocumentsForEntity("medication", medication.id);
-  const providers = listActiveProviders();
+  const providers = listProvidersForSelect();
 
   return (
     <div className="text-zinc-900">

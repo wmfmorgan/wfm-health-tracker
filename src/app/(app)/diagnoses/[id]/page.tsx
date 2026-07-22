@@ -19,7 +19,7 @@ import {
   ProviderSelect,
 } from "@/components/records/provider-select";
 import {
-  listActiveProviders,
+  listProvidersForSelect,
   listFacilityOptions,
 } from "@/server/services/providers";
 
@@ -46,7 +46,7 @@ export default async function DiagnosisDetailPage({
   const diagnosis = getDiagnosis(id);
   if (!diagnosis) notFound();
   const documents = listDocumentsForEntity("diagnosis", diagnosis.id);
-  const providers = listActiveProviders();
+  const providers = listProvidersForSelect();
   const facilities = listFacilityOptions();
 
   return (
