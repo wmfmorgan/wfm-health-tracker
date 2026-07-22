@@ -16,6 +16,7 @@ export const labPanelSchema = z.object({
   facility: z.string().max(200).optional().nullable(),
   status: z.enum(["pending", "final"]).default("final"),
   notes: z.string().max(10000).optional().nullable(),
+  source: z.enum(["manual", "pdf_import"]).optional(),
 });
 
 export const labPanelWithResultsSchema = labPanelSchema.extend({

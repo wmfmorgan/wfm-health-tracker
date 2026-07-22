@@ -63,7 +63,7 @@ export function createLabPanel(panelInput: LabPanelInput, results: LabResultInpu
         facility: panelInput.facility || null,
         status: panelInput.status ?? "final",
         notes: panelInput.notes || null,
-        source: "manual",
+        source: panelInput.source === "pdf_import" ? "pdf_import" : "manual",
         createdAt: t,
         updatedAt: t,
       })

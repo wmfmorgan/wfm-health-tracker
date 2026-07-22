@@ -4,10 +4,17 @@ import crypto from "node:crypto";
 import { and, eq, desc } from "drizzle-orm";
 import { getDb, ensureDataDirs } from "@/server/db";
 import { bootstrapDb } from "@/server/db/bootstrap";
-import { documents, documentLinks } from "@/server/db/schema";
+import { documents, documentLinks, importJobs } from "@/server/db/schema";
 import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/dates";
 import type { EntityType } from "@/lib/validation/document";
+
+const OPEN_IMPORT_STATUSES = [
+  "pending",
+  "awaiting_cloud_confirm",
+  "extracting",
+  "ready",
+] as const;
 
 export type { EntityType };
 
@@ -129,6 +136,27 @@ export function getDocumentFilePath(id: string): string | null {
 
 export function deleteDocument(id: string) {
   bootstrapDb();
+  const jobs = getDb()
+    .select()
+    .from(importJobs)
+    .where(eq(importJobs.documentId, id))
+    .all();
+
+  const hasOpen = jobs.some((j) =>
+    (OPEN_IMPORT_STATUSES as readonly string[]).includes(j.status),
+  );
+  if (hasOpen) {
+    throw new Error(
+      "Cannot delete document while an open AI import references it. Complete or discard the import first.",
+    );
+  }
+
+  // Terminal jobs still hold FK on document_id (no ON DELETE CASCADE).
+  // Remove them first so document delete can proceed (drafts cascade from jobs).
+  if (jobs.length > 0) {
+    getDb().delete(importJobs).where(eq(importJobs.documentId, id)).run();
+  }
+
   const fp = getDocumentFilePath(id);
   getDb().delete(documents).where(eq(documents.id, id)).run();
   if (fp && fs.existsSync(fp)) fs.unlinkSync(fp);
