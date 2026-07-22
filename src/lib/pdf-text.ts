@@ -37,9 +37,12 @@ export function assertTextUsable(text: string): string {
 export async function extractPdfText(buffer: Buffer): Promise<string> {
   let data: { text?: string };
   try {
-    // pdf-parse v2: named PDFParse class (v1 was default function export)
+    // pdf-parse v2: named PDFParse class (v1 was default function export).
+    // Must stay external to Next's bundler (see next.config serverExternalPackages).
     const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: buffer });
+    // Ensure a real Node Buffer (FormData / ArrayBuffer edge cases)
+    const dataBuf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+    const parser = new PDFParse({ data: dataBuf });
     try {
       data = await parser.getText();
     } finally {
@@ -47,7 +50,13 @@ export async function extractPdfText(buffer: Buffer): Promise<string> {
     }
   } catch (e) {
     if (e instanceof PdfTextError) throw e;
-    throw new PdfTextError("Could not parse PDF", "PARSE_FAILED");
+    const detail = e instanceof Error ? e.message : String(e);
+    // Log real cause server-side; UI still gets a clear message
+    console.error("pdf-parse failed:", detail);
+    throw new PdfTextError(
+      `Could not parse PDF${detail ? ` (${detail})` : ""}`,
+      "PARSE_FAILED",
+    );
   }
   return assertTextUsable(data.text ?? "");
 }
