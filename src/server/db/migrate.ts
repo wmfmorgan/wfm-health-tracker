@@ -74,6 +74,7 @@ export function migrate() {
     end_on TEXT,
     status TEXT NOT NULL,
     purpose TEXT,
+    how_it_helps TEXT,
     notes TEXT,
     source TEXT NOT NULL DEFAULT 'manual',
     created_at TEXT NOT NULL,
@@ -176,6 +177,7 @@ export function migrate() {
 
   // Additive migrations for existing DBs (CREATE TABLE IF NOT EXISTS won't alter columns)
   ensureColumn("medications", "how_it_helps", "TEXT");
+  ensureColumn("supplements", "how_it_helps", "TEXT");
 }
 
 function ensureColumn(table: string, column: string, typeSql: string) {

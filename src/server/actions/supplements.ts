@@ -27,6 +27,7 @@ function parseSupplementForm(formData: FormData) {
     startOn: emptyToNull(raw.startOn),
     endOn: emptyToNull(raw.endOn),
     purpose: emptyToNull(raw.purpose),
+    howItHelps: emptyToNull(raw.howItHelps),
     notes: emptyToNull(raw.notes),
   });
 }

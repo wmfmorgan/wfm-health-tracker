@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupplement } from "@/server/services/supplements";
 import { listDocumentsForEntity } from "@/server/services/documents";
+import { listDiagnosesForSelect } from "@/server/services/diagnoses";
 import {
   updateSupplementAction,
   deleteSupplementAction,
 } from "@/server/actions/supplements";
 import { AttachmentsPanel } from "@/components/records/attachments-panel";
 import { ConfirmDeleteButton } from "@/components/records/confirm-delete-button";
+import { DiagnosisSelect } from "@/components/records/diagnosis-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,7 @@ export default async function SupplementDetailPage({
   const supplement = getSupplement(id);
   if (!supplement) notFound();
   const documents = listDocumentsForEntity("supplement", supplement.id);
+  const diagnoses = listDiagnosesForSelect();
 
   return (
     <div className="text-zinc-900">
@@ -125,10 +128,25 @@ export default async function SupplementDetailPage({
           </Label>
 
           <Label className="sm:col-span-2">
-            Purpose
-            <Input name="purpose" maxLength={300} defaultValue={supplement.purpose ?? ""} />
+            Purpose (diagnosis)
+            <DiagnosisSelect
+              name="purpose"
+              diagnoses={diagnoses}
+              defaultValue={supplement.purpose}
+            />
           </Label>
         </div>
+
+        <Label>
+          How it helps
+          <Textarea
+            name="howItHelps"
+            rows={2}
+            maxLength={2000}
+            placeholder="e.g. Supports bone health; corrects low vitamin D"
+            defaultValue={supplement.howItHelps ?? ""}
+          />
+        </Label>
 
         <Label>
           Notes

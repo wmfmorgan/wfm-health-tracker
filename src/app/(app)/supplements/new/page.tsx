@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createSupplementAction } from "@/server/actions/supplements";
+import { DiagnosisSelect } from "@/components/records/diagnosis-select";
+import { listDiagnosesForSelect } from "@/server/services/diagnoses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +16,8 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 }
 
 export default function NewSupplementPage() {
+  const diagnoses = listDiagnosesForSelect();
+
   return (
     <div className="text-zinc-900">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -22,6 +26,16 @@ export default function NewSupplementPage() {
           Back to list
         </Link>
       </div>
+
+      {diagnoses.length === 0 ? (
+        <p className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          No diagnoses yet.{" "}
+          <Link href="/diagnoses/new" className="underline">
+            Add a diagnosis
+          </Link>{" "}
+          so purpose can be selected from the list.
+        </p>
+      ) : null}
 
       <form
         action={asFormAction(createSupplementAction)}
@@ -82,10 +96,20 @@ export default function NewSupplementPage() {
           </Label>
 
           <Label className="sm:col-span-2">
-            Purpose
-            <Input name="purpose" maxLength={300} />
+            Purpose (diagnosis)
+            <DiagnosisSelect name="purpose" diagnoses={diagnoses} />
           </Label>
         </div>
+
+        <Label>
+          How it helps
+          <Textarea
+            name="howItHelps"
+            rows={2}
+            maxLength={2000}
+            placeholder="e.g. Supports bone health; corrects low vitamin D"
+          />
+        </Label>
 
         <Label>
           Notes
