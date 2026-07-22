@@ -94,8 +94,10 @@ Next.js app
 |-------|--------|
 | **1 – Records hub** | Profile, allergies, clinical CRUD, document upload/storage/linking, optional passcode, dashboard, search |
 | **2 – AI PDF import** | Extract → review/edit/accept drafts → commit records already linked to source PDF |
-| **3 – AI co-pilot** | Chat, med/supplement cross-check, lab interpretation; provider router (xAI Grok + Ollama) |
+| **3 – AI co-pilot** | Chat, med/supplement cross-check, lab interpretation; provider router (xAI Grok + Ollama); **FR-001** analyte lay explanations (see `FUTURE-REQUIREMENTS.md`) |
 | **4 – Hardening** | Encrypted backup export, stronger lock UX, clearer audit of any data sent to cloud |
+
+**Future requirements:** detailed backlog in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md) (e.g. AI lay summaries of lab analytes).
 
 ---
 
