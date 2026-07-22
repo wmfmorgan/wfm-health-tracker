@@ -36,6 +36,26 @@ export function listDiagnoses(filter?: { status?: string; q?: string }) {
     .all();
 }
 
+/**
+ * All diagnoses for medication purpose dropdowns.
+ * Includes resolved/chronic so historical meds can still be linked.
+ * Order: active, chronic, resolved; then by name.
+ */
+export function listDiagnosesForSelect() {
+  const all = listDiagnoses();
+  const rank = (status: string) => {
+    if (status === "active") return 0;
+    if (status === "chronic") return 1;
+    if (status === "resolved") return 2;
+    return 3;
+  };
+  return [...all].sort((a, b) => {
+    const r = rank(a.status) - rank(b.status);
+    if (r !== 0) return r;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export function getDiagnosis(id: string) {
   bootstrapDb();
   return getDb().select().from(diagnoses).where(eq(diagnoses.id, id)).get();

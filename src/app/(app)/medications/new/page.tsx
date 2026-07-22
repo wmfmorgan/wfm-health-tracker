@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ProviderSelect } from "@/components/records/provider-select";
+import { DiagnosisSelect } from "@/components/records/diagnosis-select";
 import { listProvidersForSelect } from "@/server/services/providers";
+import { listDiagnosesForSelect } from "@/server/services/diagnoses";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,7 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 
 export default function NewMedicationPage() {
   const providers = listProvidersForSelect();
+  const diagnoses = listDiagnosesForSelect();
 
   return (
     <div className="text-zinc-900">
@@ -26,6 +29,16 @@ export default function NewMedicationPage() {
           Back to list
         </Link>
       </div>
+
+      {diagnoses.length === 0 ? (
+        <p className="mb-4 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          No diagnoses yet.{" "}
+          <Link href="/diagnoses/new" className="underline">
+            Add a diagnosis
+          </Link>{" "}
+          so purpose can be selected from the list.
+        </p>
+      ) : null}
 
       <form
         action={asFormAction(createMedicationAction)}
@@ -86,8 +99,8 @@ export default function NewMedicationPage() {
           </Label>
 
           <Label>
-            Purpose
-            <Input name="purpose" maxLength={300} />
+            Purpose (diagnosis)
+            <DiagnosisSelect name="purpose" diagnoses={diagnoses} />
           </Label>
 
           <Label>

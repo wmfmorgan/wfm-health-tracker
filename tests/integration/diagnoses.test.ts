@@ -4,6 +4,7 @@ import {
   createDiagnosis,
   getDiagnosis,
   listDiagnoses,
+  listDiagnosesForSelect,
   updateDiagnosis,
   deleteDiagnosis,
 } from "@/server/services/diagnoses";
@@ -32,5 +33,16 @@ describe("diagnoses service", () => {
     createDiagnosis({ name: "A", status: "active" });
     createDiagnosis({ name: "B", status: "resolved" });
     expect(listDiagnoses({ status: "active" })).toHaveLength(1);
+  });
+
+  it("lists all statuses for medication purpose select", () => {
+    createDiagnosis({ name: "Active Dx", status: "active" });
+    createDiagnosis({ name: "Resolved Dx", status: "resolved" });
+    createDiagnosis({ name: "Chronic Dx", status: "chronic" });
+    const forSelect = listDiagnosesForSelect();
+    expect(forSelect.map((d) => d.name)).toEqual(
+      expect.arrayContaining(["Active Dx", "Resolved Dx", "Chronic Dx"]),
+    );
+    expect(forSelect[0].status).toBe("active");
   });
 });
