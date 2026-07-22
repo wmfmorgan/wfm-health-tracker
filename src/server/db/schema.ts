@@ -129,6 +129,7 @@ export const procedures = sqliteTable("procedures", {
   performedOn: text("performed_on"),
   facility: text("facility"),
   clinician: text("clinician"),
+  diagnosis: text("diagnosis"), // related diagnosis name
   outcome: text("outcome"),
   followUp: text("follow_up"),
   notes: text("notes"),

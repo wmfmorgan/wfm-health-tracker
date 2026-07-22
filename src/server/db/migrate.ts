@@ -125,6 +125,7 @@ export function migrate() {
     performed_on TEXT,
     facility TEXT,
     clinician TEXT,
+    diagnosis TEXT,
     outcome TEXT,
     follow_up TEXT,
     notes TEXT,
@@ -182,6 +183,7 @@ export function migrate() {
   ensureColumn("supplements", "how_it_helps", "TEXT");
   ensureColumn("supplements", "prescriber", "TEXT");
   ensureColumn("tests", "diagnosis", "TEXT");
+  ensureColumn("procedures", "diagnosis", "TEXT");
 }
 
 function ensureColumn(table: string, column: string, typeSql: string) {

@@ -40,4 +40,13 @@ describe("procedures service", () => {
     expect(listProcedures({ q: "colon" })).toHaveLength(1);
     expect(listProcedures({ q: "Ortho" })).toHaveLength(1);
   });
+
+  it("associates a diagnosis", () => {
+    const row = createProcedure({
+      name: "Colonoscopy with polypectomy",
+      diagnosis: "Ulcerative colitis",
+    });
+    expect(getProcedure(row.id)?.diagnosis).toBe("Ulcerative colitis");
+    expect(listProcedures({ q: "ulcerative" })).toHaveLength(1);
+  });
 });

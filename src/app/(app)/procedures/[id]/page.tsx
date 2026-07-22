@@ -16,10 +16,12 @@ import {
   FacilitySelect,
   ProviderSelect,
 } from "@/components/records/provider-select";
+import { DiagnosisSelect } from "@/components/records/diagnosis-select";
 import {
   listProvidersForSelect,
   listFacilityOptions,
 } from "@/server/services/providers";
+import { listDiagnosesForSelect } from "@/server/services/diagnoses";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,7 @@ export default async function ProcedureDetailPage({
   const documents = listDocumentsForEntity("procedure", procedure.id);
   const providers = listProvidersForSelect();
   const facilities = listFacilityOptions();
+  const diagnoses = listDiagnosesForSelect();
 
   return (
     <div className="text-zinc-900">
@@ -90,12 +93,21 @@ export default async function ProcedureDetailPage({
             />
           </Label>
 
-          <Label className="sm:col-span-2">
+          <Label>
             Facility
             <FacilitySelect
               name="facility"
               facilities={facilities}
               defaultValue={procedure.facility}
+            />
+          </Label>
+
+          <Label>
+            Related diagnosis
+            <DiagnosisSelect
+              name="diagnosis"
+              diagnoses={diagnoses}
+              defaultValue={procedure.diagnosis}
             />
           </Label>
         </div>

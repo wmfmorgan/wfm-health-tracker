@@ -16,6 +16,7 @@ function parseProcedureForm(formData: FormData) {
     performedOn: raw.performedOn === "" ? null : raw.performedOn,
     facility: raw.facility === "" ? null : raw.facility,
     clinician: raw.clinician === "" ? null : raw.clinician,
+    diagnosis: raw.diagnosis === "" ? null : raw.diagnosis,
     outcome: raw.outcome === "" ? null : raw.outcome,
     followUp: raw.followUp === "" ? null : raw.followUp,
     notes: raw.notes === "" ? null : raw.notes,

@@ -8,10 +8,12 @@ import {
   FacilitySelect,
   ProviderSelect,
 } from "@/components/records/provider-select";
+import { DiagnosisSelect } from "@/components/records/diagnosis-select";
 import {
   listProvidersForSelect,
   listFacilityOptions,
 } from "@/server/services/providers";
+import { listDiagnosesForSelect } from "@/server/services/diagnoses";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,7 @@ function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) =
 export default function NewProcedurePage() {
   const providers = listProvidersForSelect();
   const facilities = listFacilityOptions();
+  const diagnoses = listDiagnosesForSelect();
 
   return (
     <div className="text-zinc-900">
@@ -58,9 +61,14 @@ export default function NewProcedurePage() {
             <ProviderSelect name="clinician" providers={providers} />
           </Label>
 
-          <Label className="sm:col-span-2">
+          <Label>
             Facility
             <FacilitySelect name="facility" facilities={facilities} />
+          </Label>
+
+          <Label>
+            Related diagnosis
+            <DiagnosisSelect name="diagnosis" diagnoses={diagnoses} />
           </Label>
         </div>
 

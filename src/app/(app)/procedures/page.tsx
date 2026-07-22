@@ -27,7 +27,7 @@ export default async function ProceduresPage({
         <input
           name="q"
           defaultValue={q ?? ""}
-          placeholder="Search name, facility, clinician, outcome…"
+          placeholder="Search name, facility, clinician, diagnosis, outcome…"
           className="min-w-[16rem] flex-1 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
         />
         <Button type="submit" variant="secondary">
@@ -38,7 +38,7 @@ export default async function ProceduresPage({
       {rows.length === 0 ? (
         <p className="text-sm text-zinc-500">No procedures recorded.</p>
       ) : (
-        <EntityTable headers={["Name", "Performed", "Facility", "Clinician", ""]}>
+        <EntityTable headers={["Name", "Diagnosis", "Performed", "Facility", "Clinician", ""]}>
           {rows.map((row) => (
             <tr key={row.id} className="hover:bg-zinc-50">
               <td className="px-3 py-2 font-medium">
@@ -46,6 +46,7 @@ export default async function ProceduresPage({
                   {row.name}
                 </Link>
               </td>
+              <td className="px-3 py-2 text-zinc-600">{row.diagnosis ?? "—"}</td>
               <td className="px-3 py-2 tabular-nums text-zinc-600">
                 {row.performedOn ?? "—"}
               </td>
