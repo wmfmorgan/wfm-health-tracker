@@ -60,9 +60,11 @@ function preprocessFlags(raw: unknown): unknown {
   };
 }
 
-function formatZodError(err: { issues: { path: (string | number)[]; message: string }[] }): string {
+function formatZodError(err: {
+  issues: { path: PropertyKey[]; message: string }[];
+}): string {
   return err.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+    .map((i) => `${i.path.map(String).join(".") || "(root)"}: ${i.message}`)
     .join("; ");
 }
 
