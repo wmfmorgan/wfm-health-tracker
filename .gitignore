@@ -3,6 +3,9 @@
 # worktrees
 .worktrees/
 
+# local brainstorm / visual companion sessions
+.superpowers/
+
 # dependencies
 /node_modules
 /.pnp
