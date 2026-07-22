@@ -177,6 +177,46 @@ export function migrate() {
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS import_jobs (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL REFERENCES documents(id),
+    status TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    error_message TEXT,
+    extracted_char_count INTEGER,
+    cloud_confirmed_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS draft_lab_panels (
+    id TEXT PRIMARY KEY,
+    import_job_id TEXT NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    name TEXT NOT NULL,
+    collected_on TEXT,
+    facility TEXT,
+    status TEXT NOT NULL DEFAULT 'final',
+    notes TEXT,
+    review_status TEXT NOT NULL DEFAULT 'pending',
+    committed_entity_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS draft_lab_results (
+    id TEXT PRIMARY KEY,
+    draft_panel_id TEXT NOT NULL REFERENCES draft_lab_panels(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    analyte_name TEXT NOT NULL,
+    value TEXT,
+    unit TEXT,
+    ref_low TEXT,
+    ref_high TEXT,
+    flag TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
 
   // Additive migrations for existing DBs (CREATE TABLE IF NOT EXISTS won't alter columns)
   ensureColumn("medications", "how_it_helps", "TEXT");

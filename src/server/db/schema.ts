@@ -196,3 +196,54 @@ export const analytes = sqliteTable("analytes", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+export const importJobs = sqliteTable("import_jobs", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id")
+    .notNull()
+    .references(() => documents.id),
+  status: text("status").notNull(),
+  // pending | awaiting_cloud_confirm | extracting | ready | failed | discarded | completed
+  provider: text("provider").notNull(), // grok | ollama
+  model: text("model").notNull(),
+  errorMessage: text("error_message"),
+  extractedCharCount: integer("extracted_char_count"),
+  cloudConfirmedAt: text("cloud_confirmed_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const draftLabPanels = sqliteTable("draft_lab_panels", {
+  id: text("id").primaryKey(),
+  importJobId: text("import_job_id")
+    .notNull()
+    .references(() => importJobs.id, { onDelete: "cascade" }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  name: text("name").notNull(),
+  collectedOn: text("collected_on"),
+  facility: text("facility"),
+  status: text("status").notNull().default("final"),
+  notes: text("notes"),
+  reviewStatus: text("review_status").notNull().default("pending"),
+  // pending | accepted | rejected
+  committedEntityId: text("committed_entity_id"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const draftLabResults = sqliteTable("draft_lab_results", {
+  id: text("id").primaryKey(),
+  draftPanelId: text("draft_panel_id")
+    .notNull()
+    .references(() => draftLabPanels.id, { onDelete: "cascade" }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  analyteName: text("analyte_name").notNull(),
+  value: text("value"),
+  unit: text("unit"),
+  refLow: text("ref_low"),
+  refHigh: text("ref_high"),
+  flag: text("flag"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
