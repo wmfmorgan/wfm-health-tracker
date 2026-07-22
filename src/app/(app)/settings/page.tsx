@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { getProfile } from "@/server/services/profile";
 import { savePreferredUnitsAction } from "@/server/actions/profile";
-import { saveAiSettingsAction } from "@/server/actions/settings";
 import { logoutAction } from "@/server/actions/auth";
 import { authEnabled, getSession } from "@/server/auth/session";
 import { getAiSettings, hasXaiApiKey } from "@/server/services/settings";
+import { listOllamaModels } from "@/server/ai/ollama";
+import { AiSettingsForm } from "@/components/settings/ai-settings-form";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +28,7 @@ export default async function SettingsPage() {
   const dataDir = process.env.DATA_DIR || "./data";
   const aiSettings = getAiSettings();
   const xaiConfigured = hasXaiApiKey();
+  const ollamaCatalog = await listOllamaModels(aiSettings.ollamaBaseUrl);
 
   return (
     <div className="text-zinc-900">
@@ -163,69 +162,17 @@ export default async function SettingsPage() {
         <h2 className="mb-2 text-lg font-medium">AI providers</h2>
         <p className="mb-4 text-sm text-zinc-600">
           Defaults for PDF lab import (Phase 2). You can override provider/model per import.
+          Ollama models are loaded from your local instance when it is reachable.
         </p>
-        <form action={asFormAction(saveAiSettingsAction)} className="grid max-w-lg gap-4">
-          <Label>
-            Default provider
-            <Select name="defaultProvider" defaultValue={aiSettings.defaultProvider}>
-              <option value="ollama">Ollama (local)</option>
-              <option value="grok">Grok (cloud)</option>
-            </Select>
-          </Label>
-          <Label>
-            Grok model
-            <Input
-              name="grokModel"
-              type="text"
-              defaultValue={aiSettings.grokModel}
-              placeholder="grok-4.5"
-              required
-            />
-          </Label>
-          <Label>
-            Ollama base URL
-            <Input
-              name="ollamaBaseUrl"
-              type="url"
-              defaultValue={aiSettings.ollamaBaseUrl}
-              placeholder="http://127.0.0.1:11434"
-              required
-            />
-          </Label>
-          <Label>
-            Ollama model
-            <Input
-              name="ollamaModel"
-              type="text"
-              defaultValue={aiSettings.ollamaModel}
-              placeholder="llama3.2"
-              required
-            />
-          </Label>
-          <div>
-            <p className="text-sm font-medium text-zinc-800">XAI_API_KEY</p>
-            <p className="mt-1 text-sm text-zinc-600">
-              Configured:{" "}
-              <span
-                className={`font-medium ${xaiConfigured ? "text-emerald-700" : "text-amber-700"}`}
-              >
-                {xaiConfigured ? "Yes" : "No"}
-              </span>
-            </p>
-            <p className="mt-1 text-xs text-zinc-500">
-              Set <code className="rounded bg-zinc-100 px-1 py-0.5">XAI_API_KEY</code> in{" "}
-              <code className="rounded bg-zinc-100 px-1 py-0.5">.env</code> (server-side only).
-              Required for Grok extract.
-            </p>
-          </div>
-          <p className="text-sm text-zinc-600">
-            Grok sends extracted PDF text to xAI. Each cloud import requires an explicit
-            per-import confirmation before any data leaves this machine.
-          </p>
-          <div>
-            <Button type="submit">Save AI settings</Button>
-          </div>
-        </form>
+        <AiSettingsForm
+          defaultProvider={aiSettings.defaultProvider}
+          grokModel={aiSettings.grokModel}
+          ollamaBaseUrl={aiSettings.ollamaBaseUrl}
+          ollamaModel={aiSettings.ollamaModel}
+          ollamaModels={ollamaCatalog.models}
+          ollamaListError={ollamaCatalog.error}
+          xaiConfigured={xaiConfigured}
+        />
       </section>
     </div>
   );

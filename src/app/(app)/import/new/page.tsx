@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { getAiSettings } from "@/server/services/settings";
+import { listOllamaModels } from "@/server/ai/ollama";
 import { ImportNewForm } from "@/components/import/import-new-form";
 
 export const dynamic = "force-dynamic";
 
-export default function NewImportPage() {
+export default async function NewImportPage() {
   const settings = getAiSettings();
+  const ollamaCatalog = await listOllamaModels(settings.ollamaBaseUrl);
 
   return (
     <div className="text-zinc-900">
@@ -25,6 +27,8 @@ export default function NewImportPage() {
         defaultProvider={settings.defaultProvider}
         grokModel={settings.grokModel}
         ollamaModel={settings.ollamaModel}
+        ollamaModels={ollamaCatalog.models.map((m) => m.name)}
+        ollamaListError={ollamaCatalog.error}
       />
 
       <p className="mt-6 text-xs text-zinc-500">

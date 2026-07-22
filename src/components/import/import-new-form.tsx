@@ -12,14 +12,26 @@ type Props = {
   defaultProvider: "grok" | "ollama";
   grokModel: string;
   ollamaModel: string;
+  ollamaModels: string[];
+  ollamaListError: string | null;
 };
 
-export function ImportNewForm({ defaultProvider, grokModel, ollamaModel }: Props) {
+export function ImportNewForm({
+  defaultProvider,
+  grokModel,
+  ollamaModel,
+  ollamaModels,
+  ollamaListError,
+}: Props) {
   const router = useRouter();
   const [provider, setProvider] = useState<"grok" | "ollama">(defaultProvider);
   const [modelTouched, setModelTouched] = useState(false);
+  const initialOllama =
+    ollamaModels.includes(ollamaModel) || ollamaModels.length === 0
+      ? ollamaModel
+      : ollamaModels[0]!;
   const [model, setModel] = useState(
-    defaultProvider === "grok" ? grokModel : ollamaModel,
+    defaultProvider === "grok" ? grokModel : initialOllama,
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -29,10 +41,17 @@ export function ImportNewForm({ defaultProvider, grokModel, ollamaModel }: Props
     [provider, grokModel, ollamaModel],
   );
 
+  const ollamaOptions = useMemo(() => {
+    const names = [...ollamaModels];
+    if (ollamaModel && !names.includes(ollamaModel)) names.unshift(ollamaModel);
+    return names;
+  }, [ollamaModels, ollamaModel]);
+
   function onProviderChange(next: "grok" | "ollama") {
     setProvider(next);
     if (!modelTouched) {
-      setModel(next === "grok" ? grokModel : ollamaModel);
+      if (next === "grok") setModel(grokModel);
+      else setModel(initialOllama);
     }
   }
 
@@ -104,17 +123,36 @@ export function ImportNewForm({ defaultProvider, grokModel, ollamaModel }: Props
 
         <Label>
           Model
-          <Input
-            name="model"
-            value={model}
-            onChange={(e) => {
-              setModelTouched(true);
-              setModel(e.target.value);
-            }}
-            placeholder={suggestedModel}
-            maxLength={100}
-            disabled={pending}
-          />
+          {provider === "ollama" && ollamaOptions.length > 0 ? (
+            <Select
+              name="model"
+              value={model}
+              onChange={(e) => {
+                setModelTouched(true);
+                setModel(e.target.value);
+              }}
+              disabled={pending}
+              required
+            >
+              {ollamaOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Input
+              name="model"
+              value={model}
+              onChange={(e) => {
+                setModelTouched(true);
+                setModel(e.target.value);
+              }}
+              placeholder={suggestedModel}
+              maxLength={100}
+              disabled={pending}
+            />
+          )}
         </Label>
       </div>
 
@@ -123,9 +161,15 @@ export function ImportNewForm({ defaultProvider, grokModel, ollamaModel }: Props
           Grok sends extracted PDF text to xAI. You will confirm before any cloud call.
         </p>
       ) : (
-        <p className="text-xs text-zinc-500">
-          Ollama runs locally. Extraction starts immediately after upload.
-        </p>
+        <div className="space-y-1 text-xs text-zinc-500">
+          <p>Ollama runs locally. Extraction starts immediately after upload.</p>
+          {ollamaOptions.length === 0 ? (
+            <p className="text-amber-800">
+              {ollamaListError ??
+                "No local Ollama models found. Pull a model and refresh, or type a model name."}
+            </p>
+          ) : null}
+        </div>
       )}
 
       {error ? (
