@@ -21,7 +21,8 @@ export function sessionOptions(): SessionOptions {
     password,
     cookieOptions: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      // Localhost HTTP only — never set Secure or cookies break under `next start`
+      secure: false,
       sameSite: "lax",
       path: "/",
     },

@@ -5,6 +5,7 @@ import { medications } from "@/server/db/schema";
 import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/dates";
 import type { MedicationInput } from "@/lib/validation/medication";
+import { unlinkAllForEntity } from "@/server/services/documents";
 
 export function listMedications(filter?: { status?: string; q?: string }) {
   bootstrapDb();
@@ -96,5 +97,6 @@ export function updateMedication(id: string, input: MedicationInput) {
 
 export function deleteMedication(id: string) {
   bootstrapDb();
+  unlinkAllForEntity("medication", id);
   getDb().delete(medications).where(eq(medications.id, id)).run();
 }

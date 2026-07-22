@@ -133,3 +133,12 @@ export function deleteDocument(id: string) {
   getDb().delete(documents).where(eq(documents.id, id)).run();
   if (fp && fs.existsSync(fp)) fs.unlinkSync(fp);
 }
+
+/** Remove all links for an entity; keep document files in the library. */
+export function unlinkAllForEntity(entityType: EntityType, entityId: string) {
+  bootstrapDb();
+  getDb()
+    .delete(documentLinks)
+    .where(and(eq(documentLinks.entityType, entityType), eq(documentLinks.entityId, entityId)))
+    .run();
+}

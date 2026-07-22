@@ -5,6 +5,7 @@ import { supplements } from "@/server/db/schema";
 import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/dates";
 import type { SupplementInput } from "@/lib/validation/supplement";
+import { unlinkAllForEntity } from "@/server/services/documents";
 
 export function listSupplements(filter?: { status?: string; q?: string }) {
   bootstrapDb();
@@ -93,5 +94,6 @@ export function updateSupplement(id: string, input: SupplementInput) {
 
 export function deleteSupplement(id: string) {
   bootstrapDb();
+  unlinkAllForEntity("supplement", id);
   getDb().delete(supplements).where(eq(supplements.id, id)).run();
 }

@@ -5,6 +5,7 @@ import { procedures } from "@/server/db/schema";
 import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/dates";
 import type { ProcedureInput } from "@/lib/validation/procedure";
+import { unlinkAllForEntity } from "@/server/services/documents";
 
 export function listProcedures(filter?: { q?: string }) {
   bootstrapDb();
@@ -83,5 +84,6 @@ export function updateProcedure(id: string, input: ProcedureInput) {
 
 export function deleteProcedure(id: string) {
   bootstrapDb();
+  unlinkAllForEntity("procedure", id);
   getDb().delete(procedures).where(eq(procedures.id, id)).run();
 }

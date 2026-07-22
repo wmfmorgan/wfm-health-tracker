@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import { useFreshDb } from "../helpers/test-db";
-import { createDiagnosis } from "@/server/services/diagnoses";
+import { createDiagnosis, deleteDiagnosis } from "@/server/services/diagnoses";
 import {
   savePdfDocument,
   linkDocument,
@@ -60,7 +60,7 @@ describe("documents", () => {
     expect(listDocumentsForEntity("diagnosis", d.id)).toHaveLength(0);
   });
 
-  it("unlink keeps file; entity delete does not delete document", () => {
+  it("unlink keeps file; entity delete unlinks but keeps document", () => {
     const d = createDiagnosis({ name: "Y", status: "active" });
     const doc = savePdfDocument({
       originalFilename: "b.pdf",
@@ -70,5 +70,18 @@ describe("documents", () => {
     linkDocument(doc.id, "diagnosis", d.id);
     unlinkDocument(doc.id, "diagnosis", d.id);
     expect(listAllDocuments().some((x) => x.id === doc.id)).toBe(true);
+
+    const d2 = createDiagnosis({ name: "Z", status: "active" });
+    const doc2 = savePdfDocument({
+      originalFilename: "c.pdf",
+      buffer: fakePdf(),
+      uploadedVia: "manual",
+    });
+    linkDocument(doc2.id, "diagnosis", d2.id);
+    const fp = getDocumentFilePath(doc2.id)!;
+    deleteDiagnosis(d2.id);
+    expect(listDocumentsForEntity("diagnosis", d2.id)).toHaveLength(0);
+    expect(listAllDocuments().some((x) => x.id === doc2.id)).toBe(true);
+    expect(fs.existsSync(fp)).toBe(true);
   });
 });

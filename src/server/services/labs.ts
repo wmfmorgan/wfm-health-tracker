@@ -5,6 +5,7 @@ import { labPanels, labResults } from "@/server/db/schema";
 import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/dates";
 import type { LabPanelInput, LabResultInput } from "@/lib/validation/lab";
+import { unlinkAllForEntity } from "@/server/services/documents";
 
 export function listLabPanels(filter?: { q?: string }) {
   bootstrapDb();
@@ -144,5 +145,6 @@ export function updateLabPanel(
 
 export function deleteLabPanel(id: string) {
   bootstrapDb();
+  unlinkAllForEntity("lab_panel", id);
   getDb().delete(labPanels).where(eq(labPanels.id, id)).run();
 }
