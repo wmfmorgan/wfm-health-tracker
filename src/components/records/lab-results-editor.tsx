@@ -278,6 +278,12 @@ export function LabResultsEditor({ initialResults, analytes = [] }: Props) {
           );
         })}
       </div>
+
+      <div className="flex justify-end">
+        <Button type="button" variant="secondary" size="sm" onClick={addRow}>
+          Add row
+        </Button>
+      </div>
     </div>
   );
 }
