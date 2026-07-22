@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { entityTypeSchema } from "@/lib/validation/document";
 import { savePdfDocument, linkDocument } from "@/server/services/documents";
-// import auth guard when Task 12 lands
+import { assertAuthenticated, UnauthorizedError } from "@/server/auth/guard";
 
 export async function POST(req: NextRequest) {
   try {
+    await assertAuthenticated();
+
     const form = await req.formData();
     const file = form.get("file");
     const entityTypeRaw = form.get("entityType");
@@ -33,6 +35,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, document: doc });
   } catch (e) {
+    if (e instanceof UnauthorizedError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const message = e instanceof Error ? e.message : "upload failed";
     return NextResponse.json({ error: message }, { status: 400 });
   }

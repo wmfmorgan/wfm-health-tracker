@@ -5,12 +5,21 @@ import { getDb } from "@/server/db";
 import { bootstrapDb } from "@/server/db/bootstrap";
 import { documents } from "@/server/db/schema";
 import { getDocumentFilePath } from "@/server/services/documents";
-// import auth guard when Task 12 lands
+import { assertAuthenticated, UnauthorizedError } from "@/server/auth/guard";
 
 export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  try {
+    await assertAuthenticated();
+  } catch (e) {
+    if (e instanceof UnauthorizedError) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    throw e;
+  }
+
   bootstrapDb();
   const { id } = await ctx.params;
   const doc = getDb().select().from(documents).where(eq(documents.id, id)).get();
