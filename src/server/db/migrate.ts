@@ -226,6 +226,8 @@ export function migrate() {
     description TEXT,
     system_prompt_default TEXT NOT NULL,
     system_prompt_override TEXT,
+    preferred_provider TEXT,
+    preferred_model TEXT,
     is_builtin INTEGER NOT NULL DEFAULT 0,
     is_enabled INTEGER NOT NULL DEFAULT 1,
     sort_order INTEGER NOT NULL DEFAULT 0,
@@ -279,6 +281,8 @@ export function migrate() {
   ensureColumn("supplements", "prescriber", "TEXT");
   ensureColumn("tests", "diagnosis", "TEXT");
   ensureColumn("procedures", "diagnosis", "TEXT");
+  ensureColumn("personas", "preferred_provider", "TEXT");
+  ensureColumn("personas", "preferred_model", "TEXT");
 
   seedBuiltinPersonas();
 }

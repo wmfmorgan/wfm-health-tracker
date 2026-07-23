@@ -257,6 +257,10 @@ export const personas = sqliteTable("personas", {
   description: text("description"),
   systemPromptDefault: text("system_prompt_default").notNull(),
   systemPromptOverride: text("system_prompt_override"),
+  /** null = use global AI settings default provider */
+  preferredProvider: text("preferred_provider"), // grok | ollama | null
+  /** null = use global default model for the resolved provider */
+  preferredModel: text("preferred_model"),
   isBuiltin: integer("is_builtin", { mode: "boolean" }).notNull().default(false),
   isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),

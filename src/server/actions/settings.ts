@@ -15,5 +15,8 @@ export async function saveAiSettingsAction(formData: FormData) {
   saveAiSettings(parsed.data);
   revalidatePath("/settings");
   revalidatePath("/import");
+  revalidatePath("/chat");
+  revalidatePath("/evaluate");
+  revalidatePath("/personas");
   return { ok: true as const };
 }

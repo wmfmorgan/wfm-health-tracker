@@ -16,7 +16,9 @@ import {
 function revalidateBriefPaths(viewId?: string) {
   revalidatePath("/brief", "layout");
   if (viewId) revalidatePath(`/brief/views/${viewId}`);
-  revalidatePath("/co-pilot");
+  revalidatePath("/chat");
+  revalidatePath("/evaluate");
+  revalidatePath("/personas");
 }
 
 export async function acceptViewAction(viewId: string) {

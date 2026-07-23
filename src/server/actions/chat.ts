@@ -7,6 +7,7 @@ import {
 } from "@/server/services/chat";
 
 function revalidateChatPaths() {
+  revalidatePath("/chat");
   revalidatePath("/co-pilot");
 }
 

@@ -13,6 +13,7 @@ import {
   createThreadAction,
   deleteThreadAction,
 } from "@/server/actions/chat";
+import { resolvePersonaLlm } from "@/lib/persona-llm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +42,8 @@ export type ChatPersonaOption = {
   id: string;
   name: string;
   specialty: string | null;
+  preferredProvider?: string | null;
+  preferredModel?: string | null;
 };
 
 export type ScopeKey =
@@ -93,6 +96,7 @@ type Props = {
   /** Rough chart-context size for Grok confirm (full default scope). */
   contextCharEstimate: number;
   medicalDisclaimer: string;
+  defaultPersonaId?: string;
 };
 
 function formatTime(iso: string): string {
@@ -128,6 +132,7 @@ export function ChatPanel({
   ollamaListError,
   contextCharEstimate,
   medicalDisclaimer,
+  defaultPersonaId,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -148,17 +153,34 @@ export function ChatPanel({
     });
   }, [initialThreads, initialMessages]);
 
+  const aiSettings = useMemo(
+    () => ({ defaultProvider, grokModel, ollamaModel }),
+    [defaultProvider, grokModel, ollamaModel],
+  );
+
+  const initialPersona =
+    defaultPersonaId && personas.some((p) => p.id === defaultPersonaId)
+      ? defaultPersonaId
+      : "";
+  const initialResolved = resolvePersonaLlm(
+    initialPersona
+      ? personas.find((p) => p.id === initialPersona)
+      : null,
+    aiSettings,
+  );
+
   const [message, setMessage] = useState("");
-  const [personaId, setPersonaId] = useState<string>("");
-  const [provider, setProvider] = useState<"grok" | "ollama">(defaultProvider);
-  const [modelTouched, setModelTouched] = useState(false);
+  const [personaId, setPersonaId] = useState<string>(initialPersona);
+  const [provider, setProvider] = useState<"grok" | "ollama">(
+    initialResolved.provider,
+  );
+  /** User manually overrode provider/model — stop auto-applying persona LLM. */
+  const [llmOverride, setLlmOverride] = useState(false);
   const initialOllama =
     ollamaModels.includes(ollamaModel) || ollamaModels.length === 0
       ? ollamaModel
       : ollamaModels[0]!;
-  const [model, setModel] = useState(
-    defaultProvider === "grok" ? grokModel : initialOllama,
-  );
+  const [model, setModel] = useState(initialResolved.model);
   const [scope, setScope] = useState<Record<ScopeKey, boolean>>({
     ...DEFAULT_SCOPE,
   });
@@ -176,20 +198,36 @@ export function ChatPanel({
   const ollamaOptions = useMemo(() => {
     const names = [...ollamaModels];
     if (ollamaModel && !names.includes(ollamaModel)) names.unshift(ollamaModel);
+    if (model && !names.includes(model)) names.unshift(model);
     return names;
-  }, [ollamaModels, ollamaModel]);
+  }, [ollamaModels, ollamaModel, model]);
 
   const messages = selectedThreadId
     ? (messagesByThreadId[selectedThreadId] ?? [])
     : [];
 
+  function applyPersonaLlm(nextPersonaId: string) {
+    if (llmOverride) return;
+    const persona = nextPersonaId
+      ? personas.find((p) => p.id === nextPersonaId)
+      : null;
+    const resolved = resolvePersonaLlm(persona ?? null, aiSettings);
+    setProvider(resolved.provider);
+    setModel(resolved.model);
+  }
+
+  function onPersonaChange(next: string) {
+    setPersonaId(next);
+    setCloudConfirm(null);
+    applyPersonaLlm(next);
+  }
+
   function onProviderChange(next: "grok" | "ollama") {
+    setLlmOverride(true);
     setProvider(next);
     setCloudConfirm(null);
-    if (!modelTouched) {
-      if (next === "grok") setModel(grokModel);
-      else setModel(initialOllama);
-    }
+    if (next === "grok") setModel(grokModel);
+    else setModel(initialOllama);
   }
 
   function toggleScope(key: ScopeKey) {
@@ -372,8 +410,8 @@ export function ChatPanel({
   }
 
   const evaluateHref = personaId
-    ? `/co-pilot?tab=evaluate&personaId=${encodeURIComponent(personaId)}`
-    : "/co-pilot?tab=evaluate";
+    ? `/evaluate?personaId=${encodeURIComponent(personaId)}`
+    : "/evaluate";
 
   const busy = sending || isPending;
 
@@ -613,10 +651,10 @@ export function ChatPanel({
               Persona lens
               <Select
                 value={personaId}
-                onChange={(e) => setPersonaId(e.target.value)}
+                onChange={(e) => onPersonaChange(e.target.value)}
                 disabled={busy}
               >
-                <option value="">None (general co-pilot)</option>
+                <option value="">None (general chat)</option>
                 {personas.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -647,7 +685,7 @@ export function ChatPanel({
                 <Select
                   value={model}
                   onChange={(e) => {
-                    setModelTouched(true);
+                    setLlmOverride(true);
                     setModel(e.target.value);
                   }}
                   disabled={busy}
@@ -663,7 +701,7 @@ export function ChatPanel({
                 <Input
                   value={model}
                   onChange={(e) => {
-                    setModelTouched(true);
+                    setLlmOverride(true);
                     setModel(e.target.value);
                   }}
                   placeholder={suggestedModel}

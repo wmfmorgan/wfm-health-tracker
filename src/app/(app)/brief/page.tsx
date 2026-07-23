@@ -1,8 +1,5 @@
 import Link from "next/link";
 import { MEDICAL_DISCLAIMER } from "@/server/ai/safety";
-import { estimateEvaluateContextChars } from "@/server/ai/skills/evaluate";
-import { listOllamaModels } from "@/server/ai/ollama";
-import { EvaluateForm } from "@/components/brief/evaluate-form";
 import { ExportBriefButton } from "@/components/brief/export-brief-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +14,6 @@ import {
   listViewsForPersona,
 } from "@/server/services/brief";
 import { ensurePersonasSeeded, listPersonas } from "@/server/services/personas";
-import { getAiSettings } from "@/server/services/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -71,8 +67,6 @@ export default async function BriefPage() {
   const plan = getMyPlan();
   const planBody = plan?.bodyMd ?? "";
   const conflicts = listTopicConflicts();
-  const settings = getAiSettings();
-  const ollamaCatalog = await listOllamaModels(settings.ollamaBaseUrl);
 
   const personaNameById = new Map(personas.map((p) => [p.id, p.name]));
   // Include names for accepted views whose persona may be disabled
@@ -87,15 +81,6 @@ export default async function BriefPage() {
     const draft = listViewsForPersona(p.id).find((v) => v.status === "draft");
     return { persona: p, current, draft };
   });
-
-  const contextCharEstimates: Record<string, number> = {};
-  for (const p of personas) {
-    try {
-      contextCharEstimates[p.id] = estimateEvaluateContextChars(p.id);
-    } catch {
-      contextCharEstimates[p.id] = 0;
-    }
-  }
 
   const exportMarkdown = buildExportMarkdown({
     accepted,
@@ -112,7 +97,14 @@ export default async function BriefPage() {
             they become brief memory.
           </p>
         </div>
-        <ExportBriefButton markdown={exportMarkdown} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/evaluate">
+            <Button type="button" variant="secondary">
+              Open Evaluate
+            </Button>
+          </Link>
+          <ExportBriefButton markdown={exportMarkdown} />
+        </div>
       </div>
 
       {conflicts.length > 0 ? (
@@ -189,6 +181,13 @@ export default async function BriefPage() {
                       </Button>
                     </Link>
                   ) : null}
+                  <Link
+                    href={`/evaluate?personaId=${encodeURIComponent(persona.id)}`}
+                  >
+                    <Button type="button" size="sm" variant="secondary">
+                      Evaluate
+                    </Button>
+                  </Link>
                 </div>
               </li>
             ))}
@@ -223,25 +222,15 @@ export default async function BriefPage() {
         </form>
       </section>
 
-      <section className="mb-8">
+      <section className="mb-8 rounded-lg border border-zinc-200 bg-zinc-50 p-5">
         <h2 className="mb-1 text-lg font-medium">Evaluate as…</h2>
         <p className="mb-3 text-sm text-zinc-600">
           Run a persona lens over the chart. Output is a draft view you can edit,
           accept, or reject.
         </p>
-        <EvaluateForm
-          personas={personas.map((p) => ({
-            id: p.id,
-            name: p.name,
-            specialty: p.specialty,
-          }))}
-          contextCharEstimates={contextCharEstimates}
-          defaultProvider={settings.defaultProvider}
-          grokModel={settings.grokModel}
-          ollamaModel={settings.ollamaModel}
-          ollamaModels={ollamaCatalog.models.map((m) => m.name)}
-          ollamaListError={ollamaCatalog.error}
-        />
+        <Link href="/evaluate">
+          <Button type="button">Open Evaluate</Button>
+        </Link>
       </section>
 
       <p className="mt-8 text-xs text-zinc-500">{MEDICAL_DISCLAIMER}</p>

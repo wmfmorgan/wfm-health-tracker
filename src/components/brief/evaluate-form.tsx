@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { resolvePersonaLlm } from "@/lib/persona-llm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,8 @@ export type EvaluatePersonaOption = {
   id: string;
   name: string;
   specialty: string | null;
+  preferredProvider?: string | null;
+  preferredModel?: string | null;
 };
 
 type Props = {
@@ -37,19 +40,30 @@ export function EvaluateForm({
   defaultPersonaId,
 }: Props) {
   const router = useRouter();
+  const aiSettings = useMemo(
+    () => ({ defaultProvider, grokModel, ollamaModel }),
+    [defaultProvider, grokModel, ollamaModel],
+  );
+
   const initialPersona =
     personas.find((p) => p.id === defaultPersonaId)?.id ?? personas[0]?.id ?? "";
+  const initialResolved = resolvePersonaLlm(
+    personas.find((p) => p.id === initialPersona) ?? null,
+    aiSettings,
+  );
+
   const [personaId, setPersonaId] = useState(initialPersona);
   const [focusNote, setFocusNote] = useState("");
-  const [provider, setProvider] = useState<"grok" | "ollama">(defaultProvider);
-  const [modelTouched, setModelTouched] = useState(false);
+  const [provider, setProvider] = useState<"grok" | "ollama">(
+    initialResolved.provider,
+  );
+  /** User manually overrode provider/model — stop auto-applying persona LLM. */
+  const [llmOverride, setLlmOverride] = useState(false);
   const initialOllama =
     ollamaModels.includes(ollamaModel) || ollamaModels.length === 0
       ? ollamaModel
       : ollamaModels[0]!;
-  const [model, setModel] = useState(
-    defaultProvider === "grok" ? grokModel : initialOllama,
-  );
+  const [model, setModel] = useState(initialResolved.model);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [cloudConfirm, setCloudConfirm] = useState<{
@@ -64,21 +78,35 @@ export function EvaluateForm({
   const ollamaOptions = useMemo(() => {
     const names = [...ollamaModels];
     if (ollamaModel && !names.includes(ollamaModel)) names.unshift(ollamaModel);
+    if (model && !names.includes(model)) names.unshift(model);
     return names;
-  }, [ollamaModels, ollamaModel]);
+  }, [ollamaModels, ollamaModel, model]);
 
   const estimateChars =
     personaId && contextCharEstimates[personaId] != null
       ? contextCharEstimates[personaId]!
       : null;
 
+  function applyPersonaLlm(nextPersonaId: string) {
+    if (llmOverride) return;
+    const persona = personas.find((p) => p.id === nextPersonaId) ?? null;
+    const resolved = resolvePersonaLlm(persona, aiSettings);
+    setProvider(resolved.provider);
+    setModel(resolved.model);
+  }
+
+  function onPersonaChange(next: string) {
+    setPersonaId(next);
+    setCloudConfirm(null);
+    applyPersonaLlm(next);
+  }
+
   function onProviderChange(next: "grok" | "ollama") {
+    setLlmOverride(true);
     setProvider(next);
     setCloudConfirm(null);
-    if (!modelTouched) {
-      if (next === "grok") setModel(grokModel);
-      else setModel(initialOllama);
-    }
+    if (next === "grok") setModel(grokModel);
+    else setModel(initialOllama);
   }
 
   async function runEvaluate(cloudConfirmed: boolean) {
@@ -151,7 +179,10 @@ export function EvaluateForm({
   if (personas.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm text-zinc-500">
-        No enabled personas available for evaluation.
+        No enabled personas available for evaluation.{" "}
+        <a href="/personas" className="font-medium text-zinc-800 underline">
+          Manage personas
+        </a>
       </div>
     );
   }
@@ -239,10 +270,7 @@ export function EvaluateForm({
         Persona
         <Select
           value={personaId}
-          onChange={(e) => {
-            setPersonaId(e.target.value);
-            setCloudConfirm(null);
-          }}
+          onChange={(e) => onPersonaChange(e.target.value)}
           required
           disabled={pending}
         >
@@ -289,7 +317,7 @@ export function EvaluateForm({
             <Select
               value={model}
               onChange={(e) => {
-                setModelTouched(true);
+                setLlmOverride(true);
                 setModel(e.target.value);
               }}
               disabled={pending}
@@ -305,7 +333,7 @@ export function EvaluateForm({
             <Input
               value={model}
               onChange={(e) => {
-                setModelTouched(true);
+                setLlmOverride(true);
                 setModel(e.target.value);
               }}
               placeholder={suggestedModel}

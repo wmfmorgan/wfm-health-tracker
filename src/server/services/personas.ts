@@ -5,12 +5,16 @@ import { seedBuiltinPersonas } from "@/server/db/migrate";
 import { personas } from "@/server/db/schema";
 import { newId } from "@/lib/ids";
 import { nowIso } from "@/lib/dates";
+import { resolvePersonaLlm } from "@/lib/persona-llm";
 import {
   createCustomPersonaSchema,
   updatePersonaSchema,
   type CreateCustomPersonaInput,
   type UpdatePersonaInput,
 } from "@/lib/validation/persona";
+import type { AiSettings } from "@/lib/validation/ai-settings";
+
+export { resolvePersonaLlm };
 
 export function ensurePersonasSeeded() {
   bootstrapDb();
@@ -77,6 +81,8 @@ export function createCustomPersona(input: CreateCustomPersonaInput) {
       description: data.description?.trim() || null,
       systemPromptDefault: data.systemPromptDefault.trim(),
       systemPromptOverride: null,
+      preferredProvider: data.preferredProvider ?? null,
+      preferredModel: data.preferredModel ?? null,
       isBuiltin: false,
       isEnabled: true,
       sortOrder: maxOrder + 10,
@@ -96,6 +102,10 @@ export function updatePersona(id: string, input: UpdatePersonaInput) {
     throw new Error(`Persona not found: ${id}`);
   }
 
+  if (data.systemPromptDefault !== undefined && existing.isBuiltin) {
+    throw new Error("Cannot edit systemPromptDefault on a built-in persona");
+  }
+
   const patch: Partial<typeof personas.$inferInsert> = {
     updatedAt: nowIso(),
   };
@@ -107,11 +117,21 @@ export function updatePersona(id: string, input: UpdatePersonaInput) {
   if (data.description !== undefined) {
     patch.description = data.description?.trim() || null;
   }
+  if (data.systemPromptDefault !== undefined) {
+    patch.systemPromptDefault = data.systemPromptDefault.trim();
+  }
   if (data.systemPromptOverride !== undefined) {
     const o = data.systemPromptOverride?.trim();
     patch.systemPromptOverride = o ? o : null;
   }
   if (data.isEnabled !== undefined) patch.isEnabled = data.isEnabled;
+  if (data.preferredProvider !== undefined) {
+    patch.preferredProvider = data.preferredProvider ?? null;
+  }
+  if (data.preferredModel !== undefined) {
+    const m = data.preferredModel?.trim();
+    patch.preferredModel = m ? m : null;
+  }
 
   getDb().update(personas).set(patch).where(eq(personas.id, id)).run();
   return getPersona(id)!;
@@ -145,4 +165,15 @@ export function deleteCustomPersona(id: string) {
     throw new Error("Cannot delete a built-in persona");
   }
   getDb().delete(personas).where(eq(personas.id, id)).run();
+}
+
+export function resolvePersonaLlmForId(
+  personaId: string | null | undefined,
+  aiSettings: Pick<AiSettings, "defaultProvider" | "grokModel" | "ollamaModel">,
+) {
+  if (!personaId) {
+    return resolvePersonaLlm(null, aiSettings);
+  }
+  const persona = getPersona(personaId);
+  return resolvePersonaLlm(persona ?? null, aiSettings);
 }

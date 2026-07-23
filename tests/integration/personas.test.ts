@@ -149,4 +149,32 @@ describe("personas service", () => {
     updatePersona("pcp", { systemPromptOverride: "  " });
     expect(getPersona("pcp")?.systemPromptOverride).toBeNull();
   });
+
+  it("persists preferredProvider and preferredModel", () => {
+    updatePersona("gi", {
+      preferredProvider: "grok",
+      preferredModel: "grok-4.5",
+    });
+    const gi = getPersona("gi")!;
+    expect(gi.preferredProvider).toBe("grok");
+    expect(gi.preferredModel).toBe("grok-4.5");
+
+    updatePersona("gi", {
+      preferredProvider: null,
+      preferredModel: null,
+    });
+    const cleared = getPersona("gi")!;
+    expect(cleared.preferredProvider).toBeNull();
+    expect(cleared.preferredModel).toBeNull();
+
+    const custom = createCustomPersona({
+      name: "LLM Bound",
+      systemPromptDefault: "You are an assistive specialty reviewer of a personal health chart.",
+      preferredProvider: "ollama",
+      preferredModel: "llama3.2",
+    });
+    expect(custom.preferredProvider).toBe("ollama");
+    expect(custom.preferredModel).toBe("llama3.2");
+    deleteCustomPersona(custom.id);
+  });
 });
