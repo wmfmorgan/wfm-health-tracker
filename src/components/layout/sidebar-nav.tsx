@@ -16,6 +16,8 @@ const NAV_ITEMS = [
   { href: "/procedures", label: "Procedures" },
   { href: "/import", label: "Import" },
   { href: "/documents", label: "Documents" },
+  { href: "/brief", label: "Brief" },
+  { href: "/co-pilot", label: "Co-pilot" },
   { href: "/settings", label: "Settings" },
 ] as const;
 

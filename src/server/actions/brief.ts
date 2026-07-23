@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   updateDraftViewSchema,
   type UpdateDraftViewInput,
@@ -8,6 +9,7 @@ import {
 import {
   acceptView,
   rejectView,
+  saveMyPlan,
   updateDraftView,
 } from "@/server/services/brief";
 
@@ -24,9 +26,9 @@ export async function acceptViewAction(viewId: string) {
 }
 
 export async function rejectViewAction(viewId: string) {
-  const view = rejectView(viewId);
+  rejectView(viewId);
   revalidateBriefPaths(viewId);
-  return { ok: true as const, viewId: view.id };
+  redirect("/brief");
 }
 
 export async function updateDraftViewAction(
@@ -43,4 +45,29 @@ export async function updateDraftViewAction(
   const view = updateDraftView(viewId, parsed.data);
   revalidateBriefPaths(viewId);
   return { ok: true as const, viewId: view.id };
+}
+
+/** Form-bound draft save (title + bodyMd from FormData). */
+export async function updateDraftViewFormAction(
+  viewId: string,
+  formData: FormData,
+) {
+  const bodyMd = String(formData.get("bodyMd") ?? "");
+  const titleRaw = formData.get("title");
+  const title =
+    titleRaw === null || titleRaw === undefined
+      ? undefined
+      : String(titleRaw).trim() || null;
+
+  return updateDraftViewAction(viewId, {
+    bodyMd,
+    ...(title !== undefined ? { title } : {}),
+  });
+}
+
+export async function saveMyPlanAction(formData: FormData) {
+  const bodyMd = String(formData.get("bodyMd") ?? "");
+  saveMyPlan(bodyMd);
+  revalidateBriefPaths();
+  return { ok: true as const };
 }
