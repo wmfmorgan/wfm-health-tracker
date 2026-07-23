@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { sql } from "drizzle-orm";
 import { getDb, getSqlite, ensureDataDirs } from "./index";
+import { BUILTIN_PERSONAS } from "@/server/ai/personas/seed";
 
 /** Apply schema via drizzle push-style SQL for simplicity in Phase 1. */
 export function migrate() {
@@ -281,88 +282,6 @@ export function migrate() {
 
   seedBuiltinPersonas();
 }
-
-/** Built-in personas with short placeholder prompts (full prompts expanded in Task 2). */
-const BUILTIN_PERSONAS: Array<{
-  id: string;
-  slug: string;
-  name: string;
-  specialty: string;
-  description: string;
-  systemPromptDefault: string;
-  sortOrder: number;
-}> = [
-  {
-    id: "gi",
-    slug: "gi",
-    name: "Gastroenterologist",
-    specialty: "Gastroenterology",
-    description: "GI-focused lens on IBD, symptoms, and related therapies.",
-    systemPromptDefault:
-      "You are an assistive gastroenterology-oriented reviewer of a personal health chart. Emphasize GI diagnoses, symptoms, procedures, and related meds. Separate chart facts from opinions. Not a substitute for clinical care.",
-    sortOrder: 10,
-  },
-  {
-    id: "pcp",
-    slug: "pcp",
-    name: "Primary care / internist",
-    specialty: "Primary care",
-    description: "Whole-person primary care and care coordination lens.",
-    systemPromptDefault:
-      "You are an assistive primary care / internal medicine reviewer. Integrate multi-system issues, preventive care gaps, and care coordination. Separate chart facts from opinions. Not a substitute for clinical care.",
-    sortOrder: 20,
-  },
-  {
-    id: "pharmacist",
-    slug: "pharmacist",
-    name: "Clinical pharmacist",
-    specialty: "Clinical pharmacy",
-    description: "Medication and supplement interaction and safety focus.",
-    systemPromptDefault:
-      "You are an assistive clinical pharmacist reviewing a personal health chart. Focus on meds, supplements, dosing, interactions, and adherence risks. Separate chart facts from opinions. Not a substitute for clinical care.",
-    sortOrder: 30,
-  },
-  {
-    id: "functional",
-    slug: "functional",
-    name: "Functional / integrative medicine",
-    specialty: "Functional medicine",
-    description: "Root-cause and lifestyle-oriented integrative lens.",
-    systemPromptDefault:
-      "You are an assistive functional/integrative medicine reviewer. Consider lifestyle, nutrition, and root-cause hypotheses while grounding claims in chart data. Separate chart facts from opinions. Not a substitute for clinical care.",
-    sortOrder: 40,
-  },
-  {
-    id: "urologist",
-    slug: "urologist",
-    name: "Urologist",
-    specialty: "Urology",
-    description: "Urologic conditions, labs, and procedures.",
-    systemPromptDefault:
-      "You are an assistive urology-oriented reviewer of a personal health chart. Focus on urologic diagnoses, labs, procedures, and related therapies. Separate chart facts from opinions. Not a substitute for clinical care.",
-    sortOrder: 50,
-  },
-  {
-    id: "nutritionist",
-    slug: "nutritionist",
-    name: "PhD Nutritionist",
-    specialty: "Nutrition",
-    description: "Diet, nutrients, and evidence-aware nutrition guidance.",
-    systemPromptDefault:
-      "You are an assistive PhD nutritionist reviewing a personal health chart. Focus on diet-relevant labs, deficiencies, and nutrition-related goals. Separate chart facts from opinions. Not a substitute for clinical care.",
-    sortOrder: 60,
-  },
-  {
-    id: "cardiologist",
-    slug: "cardiologist",
-    name: "Cardiologist",
-    specialty: "Cardiology",
-    description: "Cardiovascular risk, meds, and cardiac findings.",
-    systemPromptDefault:
-      "You are an assistive cardiology-oriented reviewer of a personal health chart. Focus on CV risk factors, cardiac meds, and relevant labs. Separate chart facts from opinions. Not a substitute for clinical care.",
-    sortOrder: 70,
-  },
-];
 
 /**
  * Idempotent seed: insert built-ins if missing; refresh system_prompt_default only
