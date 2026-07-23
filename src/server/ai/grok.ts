@@ -47,4 +47,29 @@ export class GrokProvider implements AIProvider {
       throw new Error("Grok returned non-JSON content");
     }
   }
+
+  async completeText(input: {
+    system: string;
+    user: string;
+    model: string;
+  }): Promise<string> {
+    const completion = await this.client.chat.completions.create({
+      model: input.model,
+      messages: [
+        { role: "system", content: input.system },
+        { role: "user", content: input.user },
+      ],
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (content == null || content === "") {
+      throw new Error("Grok returned empty content");
+    }
+
+    if (typeof content !== "string") {
+      throw new Error("Grok returned non-text content");
+    }
+
+    return content;
+  }
 }

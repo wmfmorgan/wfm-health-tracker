@@ -13,6 +13,10 @@ class FakeProvider implements AIProvider {
     this.calls += 1;
     return payload;
   }
+
+  async completeText(): Promise<string> {
+    return "fake text";
+  }
 }
 
 describe("extractLabsFromText", () => {

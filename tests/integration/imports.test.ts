@@ -253,6 +253,7 @@ describe("import pipeline", () => {
     const fakeProvider: AIProvider = {
       id: "ollama",
       completeJson: async () => ({ panels: [] }),
+      completeText: async () => "",
     };
 
     const { jobId } = await startImportFromPdf({
@@ -285,6 +286,7 @@ describe("import pipeline", () => {
     const fakeProvider: AIProvider = {
       id: "grok",
       completeJson: async () => ({ panels: [] }),
+      completeText: async () => "",
     };
     const runExtractSpy = vi.fn(async (id: string) =>
       runExtractForJob(id, {

@@ -7,4 +7,9 @@ export interface AIProvider {
     user: string;
     model: string;
   }): Promise<unknown>;
+  completeText(input: {
+    system: string;
+    user: string;
+    model: string;
+  }): Promise<string>;
 }

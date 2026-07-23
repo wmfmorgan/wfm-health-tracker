@@ -121,4 +121,49 @@ export class OllamaProvider implements AIProvider {
       throw new Error("Ollama returned non-JSON content");
     }
   }
+
+  async completeText(input: {
+    system: string;
+    user: string;
+    model: string;
+  }): Promise<string> {
+    const url = `${normalizeBaseUrl(this.baseUrl)}/api/chat`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: input.model,
+        stream: false,
+        messages: [
+          { role: "system", content: input.system },
+          { role: "user", content: input.user },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(
+        `Ollama request failed (${res.status}): ${body.slice(0, 300) || res.statusText}`,
+      );
+    }
+
+    const data = (await res.json()) as {
+      message?: { content?: unknown };
+    };
+    const content = data.message?.content;
+    if (content == null || content === "") {
+      throw new Error("Ollama returned empty content");
+    }
+
+    if (typeof content === "string") {
+      return content;
+    }
+
+    if (typeof content === "object") {
+      return JSON.stringify(content);
+    }
+
+    throw new Error("Ollama returned unexpected content type");
+  }
 }
