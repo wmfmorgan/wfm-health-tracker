@@ -1,9 +1,11 @@
-import { desc, eq } from "drizzle-orm";
 import { ageFromDob } from "@/lib/dates";
-import { getDb } from "@/server/db";
 import { bootstrapDb } from "@/server/db/bootstrap";
-import { myPlan, personaViews, personas } from "@/server/db/schema";
 import { listAllergies } from "@/server/services/allergies";
+import {
+  getMyPlan,
+  listCurrentAcceptedViews,
+  type AcceptedPersonaView,
+} from "@/server/services/brief";
 import { listClinicalTests } from "@/server/services/clinical-tests";
 import { listDiagnoses } from "@/server/services/diagnoses";
 import { getLabPanel, listLabPanels } from "@/server/services/labs";
@@ -11,6 +13,9 @@ import { listMedications } from "@/server/services/medications";
 import { listProcedures } from "@/server/services/procedures";
 import { getProfile } from "@/server/services/profile";
 import { listSupplements } from "@/server/services/supplements";
+
+export type { AcceptedPersonaView };
+export { listCurrentAcceptedViews };
 
 export type ChartContextScope = {
   profile?: boolean;
@@ -34,19 +39,6 @@ export type BuiltContext = {
 
 export type Citation = BuiltContext["citations"][number];
 
-export type AcceptedPersonaView = {
-  id: string;
-  personaId: string;
-  personaName: string;
-  personaSlug: string;
-  version: number;
-  title: string | null;
-  bodyMd: string;
-  acceptedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
 const DEFAULT_MAX_CHARS = 100_000;
 const RECENT_LAB_PANELS = 5;
 const RECENT_TESTS = 10;
@@ -63,42 +55,9 @@ type Section = {
   citations: Citation[];
 };
 
-/**
- * Current accepted persona views (status=accepted only).
- * Draft / rejected / superseded are never returned.
- */
-export function listCurrentAcceptedViews(
-  opts?: { excludePersonaId?: string },
-): AcceptedPersonaView[] {
-  bootstrapDb();
-  const rows = getDb()
-    .select({
-      id: personaViews.id,
-      personaId: personaViews.personaId,
-      personaName: personas.name,
-      personaSlug: personas.slug,
-      version: personaViews.version,
-      title: personaViews.title,
-      bodyMd: personaViews.bodyMd,
-      acceptedAt: personaViews.acceptedAt,
-      createdAt: personaViews.createdAt,
-      updatedAt: personaViews.updatedAt,
-    })
-    .from(personaViews)
-    .innerJoin(personas, eq(personaViews.personaId, personas.id))
-    .where(eq(personaViews.status, "accepted"))
-    .orderBy(desc(personaViews.acceptedAt), desc(personaViews.createdAt))
-    .all();
-
-  if (opts?.excludePersonaId) {
-    return rows.filter((r) => r.personaId !== opts.excludePersonaId);
-  }
-  return rows;
-}
-
+/** @deprecated Prefer getMyPlan from @/server/services/brief */
 export function getMyPlanRow() {
-  bootstrapDb();
-  return getDb().select().from(myPlan).where(eq(myPlan.id, "default")).get();
+  return getMyPlan();
 }
 
 function line(...parts: Array<string | null | undefined | false>): string {
