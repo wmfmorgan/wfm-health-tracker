@@ -247,3 +247,69 @@ export const draftLabResults = sqliteTable("draft_lab_results", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+/** Clinical co-pilot personas (built-in + custom) */
+export const personas = sqliteTable("personas", {
+  id: text("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  specialty: text("specialty"),
+  description: text("description"),
+  systemPromptDefault: text("system_prompt_default").notNull(),
+  systemPromptOverride: text("system_prompt_override"),
+  isBuiltin: integer("is_builtin", { mode: "boolean" }).notNull().default(false),
+  isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+/** Persona chart-brief views (draft → accepted / rejected / superseded) */
+export const personaViews = sqliteTable("persona_views", {
+  id: text("id").primaryKey(),
+  personaId: text("persona_id")
+    .notNull()
+    .references(() => personas.id),
+  status: text("status").notNull(), // draft | accepted | rejected | superseded
+  version: integer("version").notNull().default(0),
+  title: text("title"),
+  bodyMd: text("body_md").notNull(),
+  sectionsJson: text("sections_json"), // JSON string
+  topicsJson: text("topics_json"),
+  citationsJson: text("citations_json"),
+  factOpinionJson: text("fact_opinion_json"),
+  provider: text("provider"),
+  model: text("model"),
+  parentViewId: text("parent_view_id"),
+  focusNote: text("focus_note"),
+  createdAt: text("created_at").notNull(),
+  acceptedAt: text("accepted_at"),
+  updatedAt: text("updated_at").notNull(),
+});
+
+/** User-owned plan section (single default row) */
+export const myPlan = sqliteTable("my_plan", {
+  id: text("id").primaryKey(), // "default"
+  bodyMd: text("body_md").notNull().default(""),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const chatThreads = sqliteTable("chat_threads", {
+  id: text("id").primaryKey(),
+  title: text("title"),
+  personaId: text("persona_id").references(() => personas.id),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const chatMessages = sqliteTable("chat_messages", {
+  id: text("id").primaryKey(),
+  threadId: text("thread_id")
+    .notNull()
+    .references(() => chatThreads.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // user | assistant | system
+  content: text("content").notNull(),
+  provider: text("provider"),
+  model: text("model"),
+  createdAt: text("created_at").notNull(),
+});
