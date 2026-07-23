@@ -5,7 +5,9 @@ import { logoutAction } from "@/server/actions/auth";
 import { authEnabled, getSession } from "@/server/auth/session";
 import { getAiSettings, hasXaiApiKey } from "@/server/services/settings";
 import { listOllamaModels } from "@/server/ai/ollama";
+import { ensurePersonasSeeded, listPersonas } from "@/server/services/personas";
 import { AiSettingsForm } from "@/components/settings/ai-settings-form";
+import { PersonasSettings } from "@/components/settings/personas-settings";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,17 @@ export default async function SettingsPage() {
   const aiSettings = getAiSettings();
   const xaiConfigured = hasXaiApiKey();
   const ollamaCatalog = await listOllamaModels(aiSettings.ollamaBaseUrl);
+  ensurePersonasSeeded();
+  const personas = listPersonas().map((p) => ({
+    id: p.id,
+    name: p.name,
+    specialty: p.specialty,
+    description: p.description,
+    systemPromptDefault: p.systemPromptDefault,
+    systemPromptOverride: p.systemPromptOverride,
+    isBuiltin: p.isBuiltin,
+    isEnabled: p.isEnabled,
+  }));
 
   return (
     <div className="text-zinc-900">
@@ -161,8 +174,9 @@ export default async function SettingsPage() {
       <section className="mb-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
         <h2 className="mb-2 text-lg font-medium">AI providers</h2>
         <p className="mb-4 text-sm text-zinc-600">
-          Defaults for PDF lab import (Phase 2). You can override provider/model per import.
-          Ollama models are loaded from your local instance when it is reachable.
+          Defaults for PDF lab import (Phase 2) and Co-pilot (Phase 3). You can override
+          provider/model per import or chat. Ollama models are loaded from your local instance
+          when it is reachable.
         </p>
         <AiSettingsForm
           defaultProvider={aiSettings.defaultProvider}
@@ -173,6 +187,15 @@ export default async function SettingsPage() {
           ollamaListError={ollamaCatalog.error}
           xaiConfigured={xaiConfigured}
         />
+      </section>
+
+      <section className="mb-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-2 text-lg font-medium">Personas</h2>
+        <p className="mb-4 text-sm text-zinc-600">
+          Clinical lenses for Co-pilot chat and Chart Brief evaluation. Outputs are assistive
+          only — not medical advice.
+        </p>
+        <PersonasSettings personas={personas} />
       </section>
     </div>
   );

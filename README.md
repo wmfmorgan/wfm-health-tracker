@@ -3,7 +3,8 @@
 Personal, **localhost-only** health chart for chronic care (e.g. ulcerative colitis) and related records.
 
 **Phase 1 = records hub:** structured clinical data + source PDFs on disk.  
-**Phase 2 = AI lab import:** extract lab panels from digital PDFs via Grok (cloud) or Ollama (local), review drafts, then commit.
+**Phase 2 = AI lab import:** extract lab panels from digital PDFs via Grok (cloud) or Ollama (local), review drafts, then commit.  
+**Phase 3 = AI co-pilot:** multi-persona chat and Chart Brief evaluation with review-gated memory.
 
 Your data lives under `data/` (SQLite + uploads). Backup = copy that folder.
 
@@ -25,7 +26,7 @@ Your data lives under `data/` (SQLite + uploads). Backup = copy that folder.
 - **Dashboard** — counts and recent activity
 - **Global search** — find records across entity types
 - **Optional passcode** — lock app + file routes via `APP_PASSWORD`
-- **Settings** — auth status, preferred units, upload limit, backup guidance, AI provider defaults
+- **Settings** — auth status, preferred units, upload limit, backup guidance, AI provider defaults, personas
 
 ---
 
@@ -41,6 +42,61 @@ Import digital lab PDFs, propose draft lab panels with AI, review and edit, then
 - **Settings** — default provider, Grok model, Ollama base URL/model; `XAI_API_KEY` status (yes/no) is shown read-only
 
 Assistive only — not medical advice. Always review drafts before commit.
+
+---
+
+## Phase 3: AI co-pilot & Chart Brief
+
+Evaluate your chart through clinical **personas**, chat with optional persona lenses, and keep accepted views in a multi-persona **Chart Brief**. Nothing from the AI becomes “memory” until you explicitly accept it.
+
+### Co-pilot (`/co-pilot`)
+
+- **Chat** — free-form threads with optional persona lens, provider/model choice (Ollama local or Grok cloud), and chart context scope
+- **Evaluate** — run a structured persona evaluation against the chart; result lands as a **draft** view only (not memory)
+- Chart context is built from your records (profile, allergies, diagnoses, meds/supplements, labs, tests, procedures, accepted views, My Plan)
+
+### Chart Brief (`/brief`)
+
+- **Multi-persona views** — each persona can have a draft and/or accepted view
+- **Review gate** — Evaluate creates drafts; you **accept** (versioned; previous accepted is superseded) or **reject** (draft discarded). Drafts are not used as peer context for later evaluations
+- **My Plan** — your own notes alongside persona views
+- **Conflicts kept, not auto-merged** — multiple accepted persona views coexist. When two or more current accepted views share topic tags, the UI shows an informational conflict flag (e.g. overlapping notes on meds). Recommendations are never auto-merged
+
+### Personas (Settings → Personas)
+
+Seven built-in lenses (tweakable, not deletable):
+
+| Persona | Focus |
+|---------|--------|
+| Gastroenterologist | GI / IBD-oriented chart review |
+| Primary care / internist | Whole-person primary care |
+| Clinical pharmacist | Meds, supplements, interactions |
+| Functional / integrative medicine | Root-cause / lifestyle lens |
+| Urologist | Urologic conditions and related data |
+| PhD Nutritionist | Diet, nutrients, nutrition-relevant labs |
+| Cardiologist | Cardiovascular risk, meds, findings |
+
+- **Enable/disable** — disabled personas are hidden from chat and evaluate
+- **System prompt override** — tweak any persona; **reset to default** for built-ins
+- **Custom personas** — create (name + prompt) and delete; built-ins can only be disabled
+
+### Grok cloud confirm
+
+Using **Grok (xAI)** for chat or evaluate requires an explicit per-request confirmation. The UI shows a rough character/token estimate of the chart payload before anything leaves the machine. **Ollama** stays local and does not require cloud confirm. Set `XAI_API_KEY` in `.env` for Grok (same as Phase 2 import).
+
+### Disclaimers
+
+- Outputs are **assistive only — not medical advice** and not a substitute for clinical care
+- Safety rules are always appended server-side to persona prompts
+- AI does **not** create or update medications, labs, diagnoses, or other chart records in Phase 3
+- Always review drafts before accept; treat opinions separately from chart facts
+
+### Later (not in this ship)
+
+- Med/supplement cross-check skill
+- Lab interpretation skill beyond import
+- **FR-001** analyte lay explanations (see `docs/superpowers/specs/FUTURE-REQUIREMENTS.md`)
+- Plan synthesis across personas
 
 ---
 
@@ -149,13 +205,13 @@ Keep backups offline or encrypted if they leave this machine.
 - SQLite via better-sqlite3 + Drizzle ORM
 - Server Actions for forms; API routes for PDF upload/download
 - Optional auth via iron-session
-- AI extract: Ollama (local HTTP) and xAI Grok (cloud, opt-in per import)
+- AI extract + co-pilot: Ollama (local HTTP) and xAI Grok (cloud, opt-in per request)
 
 ---
 
-## Out of scope (later phases)
+## Out of scope (later)
 
-- Phase 3: AI co-pilot (chat, med/lab interpretation beyond import)
 - Phase 4: encrypted backup export, stronger lock UX
 - OCR for scanned PDFs
+- Med check, lab interpret skills, FR-001 analyte lay explanations
 - Symptom journals, multi-user, mobile apps
