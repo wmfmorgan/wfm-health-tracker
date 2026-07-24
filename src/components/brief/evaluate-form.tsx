@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { resolvePersonaLlm } from "@/lib/persona-llm";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { MultiSelectDropdown } from "@/components/ui/multi-select";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AiProgress } from "@/components/ui/ai-progress";
 
 export type EvaluatePersonaOption = {
   id: string;
@@ -40,13 +41,15 @@ type Props = {
   procedures: EvaluateEntityOption[];
 };
 
-const PROGRESS_STEPS = [
-  "Preparing chart context…",
-  "Calling the model…",
-  "Waiting for AI response…",
-  "Validating evaluation…",
-  "Saving draft view…",
-] as const;
+function buildEvaluateSteps(providerLabel: string): string[] {
+  return [
+    "Preparing chart context…",
+    `Calling ${providerLabel}…`,
+    "Waiting for AI response…",
+    "Validating evaluation…",
+    "Saving draft view…",
+  ];
+}
 
 export function EvaluateForm({
   personas,
@@ -90,25 +93,12 @@ export function EvaluateForm({
   const [model, setModel] = useState(initialResolved.model);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [progressIndex, setProgressIndex] = useState(0);
 
   const [medicationIds, setMedicationIds] = useState<string[]>([]);
   const [supplementIds, setSupplementIds] = useState<string[]>([]);
   const [labPanelIds, setLabPanelIds] = useState<string[]>([]);
   const [testIds, setTestIds] = useState<string[]>([]);
   const [procedureIds, setProcedureIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!pending) {
-      setProgressIndex(0);
-      return;
-    }
-    setProgressIndex(0);
-    const id = window.setInterval(() => {
-      setProgressIndex((i) => Math.min(i + 1, PROGRESS_STEPS.length - 1));
-    }, 2800);
-    return () => window.clearInterval(id);
-  }, [pending]);
 
   const suggestedModel = useMemo(
     () => (provider === "grok" ? grokModel : ollamaModel),
@@ -210,48 +200,34 @@ export function EvaluateForm({
   if (pending) {
     const personaName =
       personas.find((p) => p.id === personaId)?.name ?? "persona";
-    const step = PROGRESS_STEPS[progressIndex] ?? PROGRESS_STEPS[0];
+    const providerLabel = provider === "grok" ? "Grok" : "Ollama";
     return (
-      <div
-        className="max-w-xl rounded-lg border border-zinc-200 bg-white p-6 shadow-sm"
-        role="status"
-        aria-live="polite"
-        aria-busy="true"
-      >
-        <div className="flex items-start gap-4">
-          <div
-            className="mt-0.5 h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900"
-            aria-hidden
-          />
-          <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-medium text-zinc-900">
-              Evaluating…
-            </h2>
-            <p className="mt-1 text-sm text-zinc-600">
-              Running{" "}
-              <span className="font-medium text-zinc-800">{personaName}</span>{" "}
-              via{" "}
-              <span className="font-medium text-zinc-800">
-                {provider === "grok" ? "Grok" : "Ollama"}
-              </span>{" "}
-              <span className="font-mono text-xs text-zinc-500">({model})</span>
-            </p>
-            <p className="mt-3 text-sm font-medium text-zinc-800">{step}</p>
-            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
-              <div
-                className="h-full rounded-full bg-zinc-900 transition-all duration-700"
-                style={{
-                  width: `${((progressIndex + 1) / PROGRESS_STEPS.length) * 100}%`,
-                }}
-              />
-            </div>
-            <p className="mt-3 text-xs text-zinc-500">
-              This can take a while for local models or large chart context. Keep
-              this tab open.
-            </p>
-          </div>
-        </div>
-      </div>
+      <AiProgress
+        title="Evaluating…"
+        subtitle={
+          <>
+            Running{" "}
+            <span className="font-medium text-zinc-800">{personaName}</span> via{" "}
+            <span className="font-medium text-zinc-800">{providerLabel}</span>{" "}
+            <span className="font-mono text-xs text-zinc-500">({model})</span>
+          </>
+        }
+        steps={buildEvaluateSteps(providerLabel)}
+        active
+        detail={
+          estimateChars != null ? (
+            <span className="tabular-nums">
+              ~{estimateChars.toLocaleString()} chars of chart context
+            </span>
+          ) : undefined
+        }
+        footer={
+          <p className="mt-3 text-xs text-zinc-500">
+            This can take a while for local models or large chart context. Keep
+            this tab open.
+          </p>
+        }
+      />
     );
   }
 

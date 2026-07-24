@@ -203,7 +203,7 @@ export const importJobs = sqliteTable("import_jobs", {
     .notNull()
     .references(() => documents.id),
   status: text("status").notNull(),
-  // pending | awaiting_cloud_confirm | extracting | ready | failed | discarded | completed
+  // pending | awaiting_cloud_confirm | extracting | ready | failed | discarded | completed | rejected
   provider: text("provider").notNull(), // grok | ollama
   model: text("model").notNull(),
   errorMessage: text("error_message"),

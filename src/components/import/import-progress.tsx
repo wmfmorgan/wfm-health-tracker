@@ -1,104 +1,116 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { AiProgress } from "@/components/ui/ai-progress";
 
-const PROGRESS_STEPS = [
-  "Uploading PDF…",
-  "Extracting text layer…",
-  "Calling the model…",
-  "Waiting for AI response…",
-  "Building draft lab panels…",
-] as const;
+/** Stage labels for import — mirrors Evaluate’s staged checklist. */
+export function buildImportSteps(providerLabel: string): string[] {
+  return [
+    "Uploading PDF…",
+    "Extracting text layer…",
+    `Calling ${providerLabel}…`,
+    "Waiting for AI response…",
+    "Parsing structured lab drafts…",
+    "Saving draft panels for review…",
+  ];
+}
+
+/**
+ * Map job status / extracted text to a minimum stage so progress reflects
+ * real server state while still animating through the AI wait stages.
+ *
+ * Steps: 0 upload · 1 text · 2 call AI · 3 wait · 4 parse · 5 save
+ */
+export function importMinStepIndex(opts: {
+  status?: string | null;
+  extractedCharCount?: number | null;
+}): number {
+  const { status, extractedCharCount } = opts;
+  if (status === "extracting" || status === "awaiting_cloud_confirm") {
+    // Text done; AI call in flight
+    return extractedCharCount != null && extractedCharCount > 0 ? 2 : 1;
+  }
+  if (status === "pending") {
+    if (extractedCharCount != null && extractedCharCount > 0) return 2;
+    return 0;
+  }
+  if (status === "ready" || status === "completed") return 5;
+  return 0;
+}
 
 type Props = {
   provider: "grok" | "ollama" | string;
   model: string;
   filename?: string | null;
+  /** Job status for status-driven stage floor. */
+  status?: string | null;
   /** When true, cycle progress steps (active request). */
   active?: boolean;
-  /** Optional status line under the title (e.g. char count). */
+  /** Optional status line (e.g. char count). */
   detail?: string | null;
+  extractedCharCount?: number | null;
 };
 
 /**
- * Evaluate-style progress card for lab PDF import / extraction.
+ * Multi-stage progress card for lab PDF import (aligned with Evaluate UI).
  */
 export function ImportProgress({
   provider,
   model,
   filename,
+  status,
   active = true,
   detail,
+  extractedCharCount,
 }: Props) {
-  const [progressIndex, setProgressIndex] = useState(0);
-
-  useEffect(() => {
-    if (!active) {
-      setProgressIndex(0);
-      return;
-    }
-    setProgressIndex(0);
-    const id = window.setInterval(() => {
-      setProgressIndex((i) => Math.min(i + 1, PROGRESS_STEPS.length - 1));
-    }, 2800);
-    return () => window.clearInterval(id);
-  }, [active]);
-
-  const step = PROGRESS_STEPS[progressIndex] ?? PROGRESS_STEPS[0];
   const providerLabel =
     provider === "grok"
       ? "Grok"
       : provider === "ollama"
         ? "Ollama"
-        : provider;
+        : String(provider);
+
+  const minStepIndex = importMinStepIndex({ status, extractedCharCount });
+
+  const subtitle = (
+    <>
+      {filename ? (
+        <>
+          Processing{" "}
+          <span className="font-medium text-zinc-800 break-all">{filename}</span>{" "}
+          via{" "}
+        </>
+      ) : (
+        "Running lab PDF extraction via "
+      )}
+      <span className="font-medium text-zinc-800">{providerLabel}</span>{" "}
+      <span className="font-mono text-xs text-zinc-500">({model})</span>
+    </>
+  );
+
+  const detailNode =
+    detail ??
+    (extractedCharCount != null && extractedCharCount > 0
+      ? `${extractedCharCount.toLocaleString()} characters extracted from PDF`
+      : null);
 
   return (
-    <div
-      className="max-w-xl rounded-lg border border-zinc-200 bg-white p-6 shadow-sm"
-      role="status"
-      aria-live="polite"
-      aria-busy={active}
-    >
-      <div className="flex items-start gap-4">
-        <div
-          className="mt-0.5 h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900"
-          aria-hidden
-        />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-medium text-zinc-900">Importing…</h2>
-          <p className="mt-1 text-sm text-zinc-600">
-            {filename ? (
-              <>
-                Processing{" "}
-                <span className="font-medium text-zinc-800 break-all">
-                  {filename}
-                </span>{" "}
-                via{" "}
-              </>
-            ) : (
-              "Running extraction via "
-            )}
-            <span className="font-medium text-zinc-800">{providerLabel}</span>{" "}
-            <span className="font-mono text-xs text-zinc-500">({model})</span>
-          </p>
-          <p className="mt-3 text-sm font-medium text-zinc-800">{step}</p>
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
-            <div
-              className="h-full rounded-full bg-zinc-900 transition-all duration-700"
-              style={{
-                width: `${((progressIndex + 1) / PROGRESS_STEPS.length) * 100}%`,
-              }}
-            />
-          </div>
-          {detail ? (
-            <p className="mt-2 text-xs tabular-nums text-zinc-500">{detail}</p>
-          ) : null}
-          <p className="mt-3 text-xs text-zinc-500">
-            This can take a while for local models or large PDFs. Keep this tab
-            open.
-          </p>
-        </div>
-      </div>
-    </div>
+    <AiProgress
+      title="Importing…"
+      subtitle={subtitle}
+      steps={buildImportSteps(providerLabel)}
+      active={active}
+      minStepIndex={minStepIndex}
+      detail={
+        detailNode ? (
+          <span className="tabular-nums">{detailNode}</span>
+        ) : undefined
+      }
+      footer={
+        <p className="mt-3 text-xs text-zinc-500">
+          This can take a while for local models or large PDFs. Keep this tab
+          open until drafts appear for review.
+        </p>
+      }
+    />
   );
 }

@@ -10,6 +10,8 @@ export const importJobStatusSchema = z.enum([
   "failed",
   "discarded",
   "completed",
+  /** All draft panels rejected; nothing committed to the chart. */
+  "rejected",
 ]);
 export const draftReviewStatusSchema = z.enum(["pending", "accepted", "rejected"]);
 

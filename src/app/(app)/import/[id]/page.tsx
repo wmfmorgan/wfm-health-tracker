@@ -31,11 +31,13 @@ function statusVariant(
     case "ready":
       return "default";
     case "failed":
+    case "rejected":
       return "danger";
     case "discarded":
       return "muted";
     case "pending":
     case "extracting":
+    case "awaiting_cloud_confirm":
       return "warning";
     default:
       return "default";
@@ -72,6 +74,7 @@ export default async function ImportJobDetailPage({
   const showReview =
     job.status === "ready" ||
     job.status === "completed" ||
+    job.status === "rejected" ||
     job.status === "discarded";
 
   return (
@@ -110,7 +113,9 @@ export default async function ImportJobDetailPage({
               Open PDF
             </Button>
           </a>
-          {job.status !== "discarded" && job.status !== "completed" ? (
+          {job.status !== "discarded" &&
+          job.status !== "completed" &&
+          job.status !== "rejected" ? (
             <form action={asFormAction(discardImportJobAction.bind(null, job.id))}>
               <Button type="submit" variant="danger" size="sm">
                 Discard job
@@ -129,12 +134,9 @@ export default async function ImportJobDetailPage({
             provider={job.provider}
             model={job.model}
             filename={filename}
+            status={job.status}
+            extractedCharCount={job.extractedCharCount}
             active
-            detail={
-              job.extractedCharCount != null
-                ? `${job.extractedCharCount.toLocaleString()} characters extracted from PDF`
-                : null
-            }
           />
         </div>
       ) : null}

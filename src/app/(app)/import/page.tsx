@@ -15,6 +15,7 @@ function statusVariant(
     case "ready":
       return "default";
     case "failed":
+    case "rejected":
       return "danger";
     case "discarded":
       return "muted";

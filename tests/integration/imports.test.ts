@@ -103,7 +103,7 @@ describe("import service", () => {
 
     let afterReject = getImportJob(job.id)!;
     expect(afterReject.drafts[0].reviewStatus).toBe("rejected");
-    expect(afterReject.status).toBe("completed");
+    expect(afterReject.status).toBe("rejected");
     expect(listLabPanels()).toHaveLength(0);
 
     // discard path with remaining pending

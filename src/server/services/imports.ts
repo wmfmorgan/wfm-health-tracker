@@ -113,7 +113,35 @@ export function getImportJob(id: string): ImportJobWithDrafts | undefined {
     return { ...panel, results };
   });
 
-  return { ...job, drafts };
+  // Legacy: fully-rejected imports used to be stored as "completed".
+  let status = job.status;
+  if (status === "completed") {
+    const terminal = terminalStatusFromDrafts(panels);
+    if (terminal === "rejected") {
+      status = "rejected";
+      getDb()
+        .update(importJobs)
+        .set({ status: "rejected", updatedAt: nowIso() })
+        .where(eq(importJobs.id, id))
+        .run();
+    }
+  }
+
+  return { ...job, status, drafts };
+}
+
+/**
+ * When every draft is resolved with zero accepts, job is rejected (not completed).
+ * Used for new writes and for correcting older rows that were stored as completed.
+ */
+function terminalStatusFromDrafts(
+  panels: Array<{ reviewStatus: string }>,
+): "completed" | "rejected" | null {
+  if (panels.length === 0) return "rejected";
+  if (panels.some((p) => p.reviewStatus === "pending")) return null;
+  return panels.some((p) => p.reviewStatus === "accepted")
+    ? "completed"
+    : "rejected";
 }
 
 export function listImportJobs(): Array<ImportJobRow & { filename?: string }> {
@@ -128,10 +156,31 @@ export function listImportJobs(): Array<ImportJobRow & { filename?: string }> {
     .orderBy(desc(importJobs.createdAt))
     .all();
 
-  return rows.map((r) => ({
-    ...r.job,
-    filename: r.filename ?? undefined,
-  }));
+  return rows.map((r) => {
+    let status = r.job.status;
+    // Legacy: fully-rejected imports used to be stored as "completed".
+    if (status === "completed") {
+      const panels = getDb()
+        .select({ reviewStatus: draftLabPanels.reviewStatus })
+        .from(draftLabPanels)
+        .where(eq(draftLabPanels.importJobId, r.job.id))
+        .all();
+      const terminal = terminalStatusFromDrafts(panels);
+      if (terminal === "rejected") {
+        status = "rejected";
+        getDb()
+          .update(importJobs)
+          .set({ status: "rejected", updatedAt: nowIso() })
+          .where(eq(importJobs.id, r.job.id))
+          .run();
+      }
+    }
+    return {
+      ...r.job,
+      status,
+      filename: r.filename ?? undefined,
+    };
+  });
 }
 
 export function setJobStatus(
@@ -460,23 +509,23 @@ export function recomputeJobCompletion(jobId: string): void {
   // Only auto-complete from ready (not discarded/failed/etc.)
   if (job.status !== "ready") return;
 
-  const pending = getDb()
+  const panels = getDb()
     .select()
     .from(draftLabPanels)
     .where(eq(draftLabPanels.importJobId, jobId))
-    .all()
-    .filter((p) => p.reviewStatus === "pending");
+    .all();
 
-  if (pending.length === 0) {
-    getDb()
-      .update(importJobs)
-      .set({
-        status: "completed",
-        updatedAt: nowIso(),
-      })
-      .where(eq(importJobs.id, jobId))
-      .run();
-  }
+  const nextStatus = terminalStatusFromDrafts(panels);
+  if (!nextStatus) return;
+
+  getDb()
+    .update(importJobs)
+    .set({
+      status: nextStatus,
+      updatedAt: nowIso(),
+    })
+    .where(eq(importJobs.id, jobId))
+    .run();
 }
 
 /** After PDF saved: create job, extract text layer, then branch on provider. */
