@@ -6,6 +6,7 @@ import { resolvePersonaLlm } from "@/lib/persona-llm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MultiSelectDropdown } from "@/components/ui/multi-select";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -46,62 +47,6 @@ const PROGRESS_STEPS = [
   "Validating evaluation…",
   "Saving draft view…",
 ] as const;
-
-function MultiPick({
-  label,
-  options,
-  value,
-  onChange,
-  disabled,
-  emptyHint,
-}: {
-  label: string;
-  options: EvaluateEntityOption[];
-  value: string[];
-  onChange: (ids: string[]) => void;
-  disabled?: boolean;
-  emptyHint: string;
-}) {
-  return (
-    <Label>
-      {label}
-      {options.length === 0 ? (
-        <p className="mt-1 text-xs font-normal text-zinc-500">{emptyHint}</p>
-      ) : (
-        <>
-          <select
-            multiple
-            value={value}
-            disabled={disabled}
-            onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions).map(
-                (o) => o.value,
-              );
-              onChange(selected);
-            }}
-            className="mt-1 min-h-[6.5rem] w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
-            size={Math.min(6, Math.max(3, options.length))}
-          >
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs font-normal text-zinc-500">
-            Hold ⌘/Ctrl to select multiple. Leave empty to include defaults (all
-            active / recent).
-            {value.length > 0 ? (
-              <span className="ml-1 font-medium text-zinc-700">
-                {value.length} selected
-              </span>
-            ) : null}
-          </p>
-        </>
-      )}
-    </Label>
-  );
-}
 
 export function EvaluateForm({
   personas,
@@ -355,40 +300,50 @@ export function EvaluateForm({
           included.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <MultiPick
+          <MultiSelectDropdown
             label="Medications"
             options={medications}
             value={medicationIds}
             onChange={setMedicationIds}
+            disabled={pending}
             emptyHint="No medications recorded."
+            placeholder="All active meds"
           />
-          <MultiPick
+          <MultiSelectDropdown
             label="Supplements"
             options={supplements}
             value={supplementIds}
             onChange={setSupplementIds}
+            disabled={pending}
             emptyHint="No supplements recorded."
+            placeholder="All active supplements"
           />
-          <MultiPick
+          <MultiSelectDropdown
             label="Lab panels"
             options={labPanels}
             value={labPanelIds}
             onChange={setLabPanelIds}
+            disabled={pending}
             emptyHint="No lab panels recorded."
+            placeholder="Recent lab panels"
           />
-          <MultiPick
+          <MultiSelectDropdown
             label="Tests"
             options={tests}
             value={testIds}
             onChange={setTestIds}
+            disabled={pending}
             emptyHint="No tests recorded."
+            placeholder="Recent tests"
           />
-          <MultiPick
+          <MultiSelectDropdown
             label="Procedures"
             options={procedures}
             value={procedureIds}
             onChange={setProcedureIds}
+            disabled={pending}
             emptyHint="No procedures recorded."
+            placeholder="Recent procedures"
           />
         </div>
       </fieldset>
