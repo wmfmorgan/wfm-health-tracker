@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   useEffect,
   useMemo,
@@ -384,10 +383,6 @@ export function ChatPanel({
     await sendChat();
   }
 
-  const evaluateHref = personaId
-    ? `/brief?personaId=${encodeURIComponent(personaId)}`
-    : "/brief";
-
   const busy = sending || isPending;
 
   return (
@@ -663,20 +658,6 @@ export function ChatPanel({
             <Button type="submit" disabled={busy || !message.trim()}>
               {sending ? "Sending…" : "Send"}
             </Button>
-            <Link
-              href={evaluateHref}
-              className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
-            >
-              {personaId
-                ? "Evaluate with this persona"
-                : "Open Evaluation & Briefs"}
-            </Link>
-            <Link
-              href="/brief"
-              className="text-sm text-zinc-600 underline-offset-2 hover:underline"
-            >
-              Chart brief
-            </Link>
           </div>
         </form>
 
