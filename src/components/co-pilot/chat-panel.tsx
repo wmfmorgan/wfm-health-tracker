@@ -386,9 +386,9 @@ export function ChatPanel({
   const busy = sending || isPending;
 
   return (
-    <div className="flex min-h-[28rem] flex-col gap-4 xl:flex-row">
+    <div className="flex min-h-[28rem] w-full flex-col gap-4 xl:flex-row">
       {/* Thread list */}
-      <aside className="flex w-full shrink-0 flex-col rounded-lg border border-zinc-200 bg-white shadow-sm xl:w-52">
+      <aside className="flex w-full shrink-0 flex-col rounded-lg border border-zinc-200 bg-white shadow-sm xl:w-48">
         <div className="flex items-center justify-between gap-2 border-b border-zinc-200 px-3 py-2">
           <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
             Threads
@@ -450,9 +450,9 @@ export function ChatPanel({
         </ul>
       </aside>
 
-      {/* Transcript + composer */}
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <div className="flex min-h-[14rem] flex-1 flex-col rounded-lg border border-zinc-200 bg-white shadow-sm">
+      {/* Transcript + composer (primary / widest column) */}
+      <div className="flex min-w-0 flex-[2] flex-col gap-3 xl:min-w-[28rem]">
+        <div className="flex min-h-[16rem] flex-1 flex-col rounded-lg border border-zinc-200 bg-white shadow-sm">
           <div className="border-b border-zinc-200 px-4 py-2">
             <h2 className="text-sm font-medium text-zinc-900">
               {selectedThreadId
@@ -474,7 +474,7 @@ export function ChatPanel({
             </p>
           </div>
 
-          <div className="flex max-h-[22rem] flex-1 flex-col gap-3 overflow-y-auto px-4 py-3 xl:max-h-[26rem]">
+          <div className="flex max-h-[28rem] min-h-[16rem] flex-1 flex-col gap-3 overflow-y-auto px-4 py-3 xl:max-h-[36rem]">
             {messages.length === 0 ? (
               <p className="text-sm text-zinc-500">
                 Ask about meds, labs, or your plan. Use the panel on the right to
@@ -487,7 +487,7 @@ export function ChatPanel({
                 return (
                   <div
                     key={m.id}
-                    className={`max-w-[95%] rounded-lg px-3 py-2 text-sm ${
+                    className={`max-w-[min(48rem,95%)] rounded-lg px-3 py-2 text-sm ${
                       isUser
                         ? "ml-auto bg-zinc-900 text-white"
                         : isSystem
@@ -555,7 +555,7 @@ export function ChatPanel({
       </div>
 
       {/* Options sidebar (right) */}
-      <aside className="flex w-full shrink-0 flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm xl:w-64">
+      <aside className="flex w-full shrink-0 flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm xl:w-56">
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
             Options
