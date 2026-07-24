@@ -8,7 +8,6 @@ import {
   type LabResultInput,
 } from "@/lib/validation/lab";
 import {
-  confirmCloudAndExtract,
   retryFailedJob,
   acceptDraftPanel,
   rejectDraftPanel,
@@ -61,12 +60,6 @@ function revalidateImportPaths(jobId?: string) {
   if (jobId) revalidatePath(`/import/${jobId}`);
   revalidatePath("/labs");
   revalidatePath("/documents");
-}
-
-export async function confirmCloudImportAction(jobId: string) {
-  await confirmCloudAndExtract(jobId);
-  revalidateImportPaths(jobId);
-  return { ok: true as const };
 }
 
 export async function retryImportAction(jobId: string) {

@@ -37,7 +37,7 @@ Import digital lab PDFs, propose draft lab panels with AI, review and edit, then
 - **Import flow** — upload PDF → extract text → AI draft → review UI → commit labs (+ attach PDF)
 - **Dual providers**
   - **Ollama** (local, default) — text stays on your machine; requires a running Ollama server
-  - **Grok** (xAI cloud) — requires `XAI_API_KEY`; each import asks for explicit cloud confirmation before text is sent
+  - **Grok** (xAI cloud) — requires `XAI_API_KEY`; PDF text is sent to xAI when Grok is selected
 - **Text-layer requirement** — only digital PDFs with a selectable text layer. Scanned/image-only PDFs (OCR) are not supported
 - **Settings** — default provider, Grok model, Ollama base URL/model; `XAI_API_KEY` status (yes/no) is shown read-only
 
@@ -49,11 +49,12 @@ Assistive only — not medical advice. Always review drafts before commit.
 
 Evaluate your chart through clinical **personas**, chat with optional persona lenses, and keep accepted views in a multi-persona **Chart Brief**. Nothing from the AI becomes “memory” until you explicitly accept it.
 
-### Co-pilot (`/co-pilot`)
+### Chat (`/chat`) and Evaluate (`/evaluate`)
 
 - **Chat** — free-form threads with optional persona lens, provider/model choice (Ollama local or Grok cloud), and chart context scope
 - **Evaluate** — run a structured persona evaluation against the chart; result lands as a **draft** view only (not memory)
 - Chart context is built from your records (profile, allergies, diagnoses, meds/supplements, labs, tests, procedures, accepted views, My Plan)
+- **Personas** — managed at `/personas` (prompts + per-persona LLM binding)
 
 ### Chart Brief (`/brief`)
 
@@ -62,7 +63,7 @@ Evaluate your chart through clinical **personas**, chat with optional persona le
 - **My Plan** — your own notes alongside persona views
 - **Conflicts kept, not auto-merged** — multiple accepted persona views coexist. When two or more current accepted views share topic tags, the UI shows an informational conflict flag (e.g. overlapping notes on meds). Recommendations are never auto-merged
 
-### Personas (Settings → Personas)
+### Personas (`/personas`)
 
 Seven built-in lenses (tweakable, not deletable):
 
@@ -80,9 +81,9 @@ Seven built-in lenses (tweakable, not deletable):
 - **System prompt override** — tweak any persona; **reset to default** for built-ins
 - **Custom personas** — create (name + prompt) and delete; built-ins can only be disabled
 
-### Grok cloud confirm
+### Grok (cloud)
 
-Using **Grok (xAI)** for chat or evaluate requires an explicit per-request confirmation. The UI shows a rough character/token estimate of the chart payload before anything leaves the machine. **Ollama** stays local and does not require cloud confirm. Set `XAI_API_KEY` in `.env` for Grok (same as Phase 2 import).
+Using **Grok (xAI)** for import, chat, or evaluate sends the selected payload to xAI when you choose Grok. Prefer **Ollama** to keep data local. Set `XAI_API_KEY` in `.env` for Grok.
 
 ### Disclaimers
 

@@ -17,7 +17,7 @@ type Props = {
 };
 
 /**
- * Co-pilot Evaluate tab — reuses the brief EvaluateForm (same API + Grok confirm).
+ * Evaluate panel — reuses EvaluateForm.
  */
 export function EvaluatePanel(props: Props) {
   return (

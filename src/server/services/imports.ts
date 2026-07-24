@@ -528,39 +528,10 @@ export async function startImportFromPdf(opts: {
 
   const extractedCharCount = countExtractedChars(text);
 
-  if (provider === "grok") {
-    setJobStatus(job.id, "awaiting_cloud_confirm", { extractedCharCount });
-    return { jobId: job.id };
-  }
-
   setJobStatus(job.id, "pending", { extractedCharCount });
   const runExtract = opts.deps?.runExtract ?? runExtractForJob;
   await runExtract(job.id);
   return { jobId: job.id };
-}
-
-export async function confirmCloudAndExtract(
-  jobId: string,
-  deps?: {
-    runExtract?: typeof runExtractForJob;
-  },
-): Promise<void> {
-  bootstrapDb();
-  const job = getDb().select().from(importJobs).where(eq(importJobs.id, jobId)).get();
-  if (!job) throw new Error(`Import job not found: ${jobId}`);
-  if (job.status !== "awaiting_cloud_confirm") {
-    throw new Error(`Job is not awaiting cloud confirmation (status: ${job.status})`);
-  }
-  if (job.provider !== "grok") {
-    throw new Error("Cloud confirmation is only required for Grok imports");
-  }
-
-  setJobStatus(jobId, "awaiting_cloud_confirm", {
-    cloudConfirmedAt: nowIso(),
-  });
-
-  const runExtract = deps?.runExtract ?? runExtractForJob;
-  await runExtract(jobId);
 }
 
 export async function runExtractForJob(
@@ -627,13 +598,8 @@ export async function retryFailedJob(
     throw new Error(`Can only retry failed jobs (status: ${job.status})`);
   }
 
-  // Clear previous error
+  // Clear previous error then re-run extract
   setJobStatus(jobId, "failed", { errorMessage: null });
-
-  if (job.provider === "grok" && !job.cloudConfirmedAt) {
-    setJobStatus(jobId, "awaiting_cloud_confirm", { errorMessage: null });
-    return;
-  }
 
   const runExtract = deps?.runExtract ?? runExtractForJob;
   await runExtract(jobId);

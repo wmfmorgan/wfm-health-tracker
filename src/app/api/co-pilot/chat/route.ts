@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { assertAuthenticated, UnauthorizedError } from "@/server/auth/guard";
-import { CloudConfirmRequiredError } from "@/server/ai/skills/evaluate";
 import { runChatTurn } from "@/server/ai/skills/chat";
 
 const scopeSchema = z
@@ -26,7 +25,6 @@ const bodySchema = z.object({
   provider: z.enum(["grok", "ollama"]),
   model: z.string().min(1),
   scope: scopeSchema,
-  cloudConfirmed: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -59,17 +57,6 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     if (e instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (e instanceof CloudConfirmRequiredError) {
-      return NextResponse.json(
-        {
-          ok: false as const,
-          code: e.code,
-          charCount: e.charCount,
-          error: e.message,
-        },
-        { status: 400 },
-      );
     }
     const message = e instanceof Error ? e.message : "chat failed";
     return NextResponse.json(

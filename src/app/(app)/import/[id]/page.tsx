@@ -10,7 +10,6 @@ import {
   retryImportAction,
 } from "@/server/actions/imports";
 import { AutoRefresh } from "@/components/import/auto-refresh";
-import { CloudConfirm } from "@/components/import/cloud-confirm";
 import { DraftPanelCard } from "@/components/import/draft-panel-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,6 @@ function statusVariant(
       return "muted";
     case "pending":
     case "extracting":
-    case "awaiting_cloud_confirm":
       return "warning";
     default:
       return "default";
@@ -121,15 +119,9 @@ export default async function ImportJobDetailPage({
         </div>
       </div>
 
-      {job.status === "awaiting_cloud_confirm" ? (
-        <CloudConfirm
-          jobId={job.id}
-          filename={filename}
-          charCount={job.extractedCharCount}
-        />
-      ) : null}
-
-      {job.status === "pending" || job.status === "extracting" ? (
+      {job.status === "pending" ||
+      job.status === "extracting" ||
+      job.status === "awaiting_cloud_confirm" ? (
         <div className="max-w-xl rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
           <AutoRefresh intervalMs={2000} />
           <p className="text-sm font-medium text-zinc-900">Extracting…</p>

@@ -2,9 +2,6 @@ import { describe, it, expect } from "vitest";
 import { useFreshDb, getDb } from "../helpers/test-db";
 import { personaViews } from "@/server/db/schema";
 import type { AIProvider } from "@/server/ai/types";
-import {
-  CloudConfirmRequiredError,
-} from "@/server/ai/skills/evaluate";
 import { runChatTurn } from "@/server/ai/skills/chat";
 import {
   addMessage,
@@ -217,47 +214,7 @@ describe("runChatTurn", () => {
     expect(provider.lastSystem).toMatch(/cannot write chart brief memory/i);
   });
 
-  it("grok without cloudConfirmed throws CLOUD_CONFIRM_REQUIRED", async () => {
-    const thread = createThread();
-    const provider = new FakeProvider("grok");
-
-    await expect(
-      runChatTurn({
-        threadId: thread.id,
-        userMessage: "Hello",
-        provider: "grok",
-        model: "grok-test",
-        scope: FULL_SCOPE,
-        deps: { provider },
-      }),
-    ).rejects.toMatchObject({
-      code: "CLOUD_CONFIRM_REQUIRED",
-      name: "CloudConfirmRequiredError",
-    });
-
-    expect(provider.textCalls).toBe(0);
-    // User message should not be persisted when gated
-    expect(getThread(thread.id)!.messages).toHaveLength(0);
-
-    try {
-      await runChatTurn({
-        threadId: thread.id,
-        userMessage: "Hello",
-        provider: "grok",
-        model: "grok-test",
-        scope: FULL_SCOPE,
-        deps: { provider },
-      });
-      expect.fail("should have thrown");
-    } catch (e) {
-      expect(e).toBeInstanceOf(CloudConfirmRequiredError);
-      expect((e as CloudConfirmRequiredError).charCount).toBeGreaterThanOrEqual(
-        0,
-      );
-    }
-  });
-
-  it("grok with cloudConfirmed runs", async () => {
+  it("grok runs without cloud confirm gate", async () => {
     const thread = createThread();
     const provider = new FakeProvider("grok", ["Cloud reply"]);
 
@@ -266,7 +223,6 @@ describe("runChatTurn", () => {
       userMessage: "Hi from cloud",
       provider: "grok",
       model: "grok-test",
-      cloudConfirmed: true,
       scope: { profile: true },
       deps: { provider },
     });

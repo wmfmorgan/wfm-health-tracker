@@ -93,7 +93,7 @@ type Props = {
   ollamaModel: string;
   ollamaModels: string[];
   ollamaListError: string | null;
-  /** Rough chart-context size for Grok confirm (full default scope). */
+  /** Rough chart-context size (display only when using Grok). */
   contextCharEstimate: number;
   medicalDisclaimer: string;
   defaultPersonaId?: string;
@@ -186,10 +186,6 @@ export function ChatPanel({
   });
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [cloudConfirm, setCloudConfirm] = useState<{
-    charCount: number;
-  } | null>(null);
-
   const suggestedModel = useMemo(
     () => (provider === "grok" ? grokModel : ollamaModel),
     [provider, grokModel, ollamaModel],
@@ -218,21 +214,18 @@ export function ChatPanel({
 
   function onPersonaChange(next: string) {
     setPersonaId(next);
-    setCloudConfirm(null);
     applyPersonaLlm(next);
   }
 
   function onProviderChange(next: "grok" | "ollama") {
     setLlmOverride(true);
     setProvider(next);
-    setCloudConfirm(null);
     if (next === "grok") setModel(grokModel);
     else setModel(initialOllama);
   }
 
   function toggleScope(key: ScopeKey) {
     setScope((prev) => ({ ...prev, [key]: !prev[key] }));
-    setCloudConfirm(null);
   }
 
   async function handleNewThread() {
@@ -250,8 +243,7 @@ export function ChatPanel({
       setThreads((prev) => [t, ...prev.filter((x) => x.id !== t.id)]);
       setMessagesByThreadId((prev) => ({ ...prev, [t.id]: [] }));
       setSelectedThreadId(t.id);
-      setCloudConfirm(null);
-      startTransition(() => router.refresh());
+        startTransition(() => router.refresh());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create thread");
     }
@@ -273,14 +265,13 @@ export function ChatPanel({
         delete next[threadId];
         return next;
       });
-      setCloudConfirm(null);
-      startTransition(() => router.refresh());
+        startTransition(() => router.refresh());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete thread");
     }
   }
 
-  async function sendChat(cloudConfirmed: boolean) {
+  async function sendChat() {
     setError(null);
 
     const content = message.trim();
@@ -323,7 +314,6 @@ export function ChatPanel({
           provider,
           model,
           scope,
-          cloudConfirmed: cloudConfirmed || undefined,
         }),
       });
 
@@ -335,16 +325,6 @@ export function ChatPanel({
         error?: string;
       };
 
-      if (data.code === "CLOUD_CONFIRM_REQUIRED") {
-        setCloudConfirm({
-          charCount:
-            typeof data.charCount === "number"
-              ? data.charCount
-              : contextCharEstimate,
-        });
-        setSending(false);
-        return;
-      }
 
       if (!res.ok || !data.ok || !data.assistantMessage) {
         setError(data.error || `Chat failed (${res.status})`);
@@ -391,8 +371,7 @@ export function ChatPanel({
         );
       });
       setMessage("");
-      setCloudConfirm(null);
-      startTransition(() => router.refresh());
+        startTransition(() => router.refresh());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chat failed");
     } finally {
@@ -402,11 +381,7 @@ export function ChatPanel({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (provider === "grok" && !cloudConfirm) {
-      setCloudConfirm({ charCount: contextCharEstimate });
-      return;
-    }
-    await sendChat(provider === "grok");
+    await sendChat();
   }
 
   const evaluateHref = personaId
@@ -414,83 +389,6 @@ export function ChatPanel({
     : "/evaluate";
 
   const busy = sending || isPending;
-
-  if (cloudConfirm && provider === "grok") {
-    const chars = cloudConfirm.charCount.toLocaleString();
-    return (
-      <div className="space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-sm">
-        <div>
-          <h3 className="text-lg font-medium text-zinc-900">
-            Cloud confirmation required
-          </h3>
-          <p className="mt-1 text-sm text-zinc-700">
-            Chat will send chart context (and recent messages) to Grok (xAI).
-            Confirm before any cloud call.
-          </p>
-        </div>
-
-        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Characters (chart context)
-            </dt>
-            <dd className="mt-0.5 font-medium tabular-nums text-zinc-900">
-              {chars}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Model
-            </dt>
-            <dd className="mt-0.5 font-mono text-xs text-zinc-900">{model}</dd>
-          </div>
-        </dl>
-
-        <p className="text-xs text-zinc-600">
-          Do not send PHI you are not comfortable sharing with the cloud
-          provider. Local Ollama chat skips this step.
-        </p>
-
-        {message.trim() ? (
-          <p className="rounded-md border border-amber-100 bg-white/60 px-3 py-2 text-sm text-zinc-800">
-            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Message
-            </span>
-            <br />
-            {message.trim().slice(0, 280)}
-            {message.trim().length > 280 ? "…" : ""}
-          </p>
-        ) : null}
-
-        {error ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button
-            type="button"
-            disabled={busy}
-            onClick={() => void sendChat(true)}
-          >
-            {sending ? "Sending…" : "Send to Grok"}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={busy}
-            onClick={() => {
-              setCloudConfirm(null);
-              setError(null);
-            }}
-          >
-            Back
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-[28rem] flex-col gap-4 lg:flex-row">
@@ -530,8 +428,7 @@ export function ChatPanel({
                       className="min-w-0 flex-1 text-left"
                       onClick={() => {
                         setSelectedThreadId(t.id);
-                        setCloudConfirm(null);
-                        setError(null);
+                                            setError(null);
                       }}
                     >
                       <span className="block truncate text-sm font-medium text-zinc-900">
@@ -742,8 +639,7 @@ export function ChatPanel({
               <span className="font-medium tabular-nums">
                 {contextCharEstimate.toLocaleString()}
               </span>{" "}
-              characters (full default scope; actual depends on checkboxes). You
-              will confirm before any cloud call.
+              characters (full default scope; actual depends on checkboxes).
             </p>
           ) : (
             <div className="space-y-1 text-xs text-zinc-500">

@@ -127,8 +127,7 @@ export function AiSettingsForm({
         </p>
       </div>
       <p className="text-sm text-zinc-600">
-        Grok sends extracted PDF text to xAI. Each cloud import requires an explicit per-import
-        confirmation before any data leaves this machine.
+        Grok sends PDF text and chart context to xAI when selected. Prefer Ollama to keep data local.
       </p>
       {provider === "ollama" ? (
         <p className="text-sm text-zinc-600">

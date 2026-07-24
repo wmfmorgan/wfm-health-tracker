@@ -13,7 +13,7 @@ import {
   setJobStatus,
   acceptAllPending,
   startImportFromPdf,
-  confirmCloudAndExtract,
+
   runExtractForJob,
 } from "@/server/services/imports";
 import { getLabPanel, listLabPanels } from "@/server/services/labs";
@@ -281,7 +281,7 @@ describe("import pipeline", () => {
     expect(extractLabs).toHaveBeenCalledOnce();
   });
 
-  it("startImportFromPdf grok path waits for cloud confirm then extracts", async () => {
+  it("startImportFromPdf grok path extracts immediately without cloud confirm", async () => {
     const extractLabs = vi.fn(async () => sampleExtracted(1));
     const fakeProvider: AIProvider = {
       id: "grok",
@@ -307,18 +307,9 @@ describe("import pipeline", () => {
       },
     });
 
-    let job = getImportJob(jobId)!;
-    expect(job.status).toBe("awaiting_cloud_confirm");
-    expect(job.extractedCharCount).toBe(sampleText.length);
-    expect(job.cloudConfirmedAt).toBeNull();
-    expect(job.drafts).toHaveLength(0);
-    expect(runExtractSpy).not.toHaveBeenCalled();
-
-    await confirmCloudAndExtract(jobId, { runExtract: runExtractSpy });
-
-    job = getImportJob(jobId)!;
+    const job = getImportJob(jobId)!;
     expect(job.status).toBe("ready");
-    expect(job.cloudConfirmedAt).toBeTruthy();
+    expect(job.extractedCharCount).toBe(sampleText.length);
     expect(job.drafts).toHaveLength(1);
     expect(job.drafts[0].name).toBe("CBC");
     expect(runExtractSpy).toHaveBeenCalledOnce();

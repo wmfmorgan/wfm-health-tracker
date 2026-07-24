@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { useFreshDb } from "../helpers/test-db";
 import type { AIProvider } from "@/server/ai/types";
 import {
-  CloudConfirmRequiredError,
+
   estimateEvaluateContextChars,
   runEvaluatePersona,
 } from "@/server/ai/skills/evaluate";
@@ -104,41 +104,7 @@ describe("runEvaluatePersona", () => {
     expect(listed[0]!.personaId).toBe("pcp");
   });
 
-  it("grok without cloudConfirmed throws CLOUD_CONFIRM_REQUIRED", async () => {
-    ensurePersonasSeeded();
-    const provider = new FakeProvider("grok", [sampleEvaluateResult]);
-
-    await expect(
-      runEvaluatePersona({
-        personaId: "gi",
-        provider: "grok",
-        model: "grok-test",
-        deps: { provider },
-      }),
-    ).rejects.toMatchObject({
-      code: "CLOUD_CONFIRM_REQUIRED",
-      name: "CloudConfirmRequiredError",
-    });
-
-    expect(provider.jsonCalls).toBe(0);
-
-    try {
-      await runEvaluatePersona({
-        personaId: "gi",
-        provider: "grok",
-        model: "grok-test",
-        deps: { provider },
-      });
-      expect.fail("should have thrown");
-    } catch (e) {
-      expect(e).toBeInstanceOf(CloudConfirmRequiredError);
-      expect((e as CloudConfirmRequiredError).charCount).toBeGreaterThanOrEqual(
-        0,
-      );
-    }
-  });
-
-  it("grok with cloudConfirmed runs and writes draft", async () => {
+  it("grok runs and writes draft without cloud confirm gate", async () => {
     ensurePersonasSeeded();
     const provider = new FakeProvider("grok", [sampleEvaluateResult]);
 
@@ -146,7 +112,6 @@ describe("runEvaluatePersona", () => {
       personaId: "gi",
       provider: "grok",
       model: "grok-test",
-      cloudConfirmed: true,
       deps: { provider },
     });
 

@@ -14,15 +14,6 @@ import { getPersona } from "@/server/services/personas";
 import { createDraftView } from "@/server/services/brief";
 import { getAiSettings } from "@/server/services/settings";
 
-export class CloudConfirmRequiredError extends Error {
-  readonly code = "CLOUD_CONFIRM_REQUIRED" as const;
-
-  constructor(public readonly charCount: number) {
-    super("CLOUD_CONFIRM_REQUIRED");
-    this.name = "CloudConfirmRequiredError";
-  }
-}
-
 const EVALUATE_SCOPE: ChartContextScope = {
   profile: true,
   allergies: true,
@@ -90,7 +81,6 @@ export async function runEvaluatePersona(opts: {
   focusNote?: string;
   provider: AIProviderId;
   model: string;
-  cloudConfirmed?: boolean;
   replaceExistingDraft?: boolean;
   deps?: {
     provider?: AIProvider;
@@ -102,7 +92,6 @@ export async function runEvaluatePersona(opts: {
     focusNote,
     provider: providerId,
     model,
-    cloudConfirmed,
     replaceExistingDraft = true,
   } = opts;
 
@@ -113,10 +102,6 @@ export async function runEvaluatePersona(opts: {
     excludePersonaId: personaId,
   });
   const charCount = context.charCount;
-
-  if (providerId === "grok" && !cloudConfirmed) {
-    throw new CloudConfirmRequiredError(charCount);
-  }
 
   const persona = getPersona(personaId);
   if (!persona) {

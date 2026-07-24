@@ -6,7 +6,6 @@ import { resolveEffectivePrompt } from "@/server/ai/personas/resolve";
 import { SAFETY_SYSTEM_SUFFIX } from "@/server/ai/safety";
 import type { AIProvider, AIProviderId } from "@/server/ai/types";
 import { getAIProvider } from "@/server/ai/router";
-import { CloudConfirmRequiredError } from "@/server/ai/skills/evaluate";
 import { getPersona } from "@/server/services/personas";
 import {
   addMessage,
@@ -89,7 +88,6 @@ export async function runChatTurn(opts: {
   provider: AIProviderId;
   model: string;
   scope: ChartContextScope;
-  cloudConfirmed?: boolean;
   deps?: {
     provider?: AIProvider;
     buildContext?: typeof buildChartContext;
@@ -102,7 +100,6 @@ export async function runChatTurn(opts: {
     provider: providerId,
     model,
     scope,
-    cloudConfirmed,
   } = opts;
 
   const content = userMessage.trim();
@@ -121,10 +118,6 @@ export async function runChatTurn(opts: {
     // When chatting under a persona lens, still include that persona's accepted
     // view if present — chat is not rewriting it. No excludePersonaId.
   });
-
-  if (providerId === "grok" && !cloudConfirmed) {
-    throw new CloudConfirmRequiredError(context.charCount);
-  }
 
   // Persist user message first so history includes it.
   addMessage({

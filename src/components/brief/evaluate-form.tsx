@@ -19,8 +19,8 @@ export type EvaluatePersonaOption = {
 
 type Props = {
   personas: EvaluatePersonaOption[];
-  /** Precomputed estimateEvaluateContextChars per persona (Grok confirm UI). */
-  contextCharEstimates: Record<string, number>;
+  /** Optional precomputed context size (display only). */
+  contextCharEstimates?: Record<string, number>;
   defaultProvider: "grok" | "ollama";
   grokModel: string;
   ollamaModel: string;
@@ -31,7 +31,7 @@ type Props = {
 
 export function EvaluateForm({
   personas,
-  contextCharEstimates,
+  contextCharEstimates = {},
   defaultProvider,
   grokModel,
   ollamaModel,
@@ -66,9 +66,6 @@ export function EvaluateForm({
   const [model, setModel] = useState(initialResolved.model);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [cloudConfirm, setCloudConfirm] = useState<{
-    charCount: number;
-  } | null>(null);
 
   const suggestedModel = useMemo(
     () => (provider === "grok" ? grokModel : ollamaModel),
@@ -97,19 +94,22 @@ export function EvaluateForm({
 
   function onPersonaChange(next: string) {
     setPersonaId(next);
-    setCloudConfirm(null);
     applyPersonaLlm(next);
   }
 
   function onProviderChange(next: "grok" | "ollama") {
     setLlmOverride(true);
     setProvider(next);
-    setCloudConfirm(null);
     if (next === "grok") setModel(grokModel);
     else setModel(initialOllama);
   }
 
-  async function runEvaluate(cloudConfirmed: boolean) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!personaId) {
+      setError("Select a persona");
+      return;
+    }
     setError(null);
     setPending(true);
 
@@ -122,7 +122,6 @@ export function EvaluateForm({
           focusNote: focusNote.trim() || undefined,
           provider,
           model,
-          cloudConfirmed: cloudConfirmed || undefined,
           replaceExistingDraft: true,
         }),
       });
@@ -130,21 +129,8 @@ export function EvaluateForm({
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         viewId?: string;
-        code?: string;
-        charCount?: number;
         error?: string;
       };
-
-      if (data.code === "CLOUD_CONFIRM_REQUIRED") {
-        setCloudConfirm({
-          charCount:
-            typeof data.charCount === "number"
-              ? data.charCount
-              : (estimateChars ?? 0),
-        });
-        setPending(false);
-        return;
-      }
 
       if (!res.ok || !data.ok || !data.viewId) {
         setError(data.error || `Evaluate failed (${res.status})`);
@@ -160,22 +146,6 @@ export function EvaluateForm({
     }
   }
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!personaId) {
-      setError("Select a persona");
-      return;
-    }
-    if (provider === "grok" && !cloudConfirm) {
-      // Pre-show confirm using dry-run estimate, then require explicit Send to Grok.
-      setCloudConfirm({
-        charCount: estimateChars ?? 0,
-      });
-      return;
-    }
-    await runEvaluate(provider === "grok");
-  }
-
   if (personas.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm text-zinc-500">
@@ -183,80 +153,6 @@ export function EvaluateForm({
         <a href="/personas" className="font-medium text-zinc-800 underline">
           Manage personas
         </a>
-      </div>
-    );
-  }
-
-  if (cloudConfirm && provider === "grok") {
-    const chars = cloudConfirm.charCount.toLocaleString();
-    return (
-      <div className="max-w-xl space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-sm">
-        <div>
-          <h3 className="text-lg font-medium text-zinc-900">
-            Cloud confirmation required
-          </h3>
-          <p className="mt-1 text-sm text-zinc-700">
-            Evaluate as this persona will send chart context to Grok (xAI). Confirm
-            before any cloud call.
-          </p>
-        </div>
-
-        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Persona
-            </dt>
-            <dd className="mt-0.5 font-medium text-zinc-900">
-              {personas.find((p) => p.id === personaId)?.name ?? personaId}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Characters to send
-            </dt>
-            <dd className="mt-0.5 font-medium tabular-nums text-zinc-900">
-              {chars}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Model
-            </dt>
-            <dd className="mt-0.5 font-mono text-xs text-zinc-900">{model}</dd>
-          </div>
-        </dl>
-
-        <p className="text-xs text-zinc-600">
-          Do not send PHI you are not comfortable sharing with the cloud provider.
-          Local Ollama evaluation skips this step.
-        </p>
-
-        {error ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button
-            type="button"
-            disabled={pending}
-            onClick={() => void runEvaluate(true)}
-          >
-            {pending ? "Evaluating…" : "Send to Grok"}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={pending}
-            onClick={() => {
-              setCloudConfirm(null);
-              setError(null);
-            }}
-          >
-            Back
-          </Button>
-        </div>
       </div>
     );
   }
@@ -347,7 +243,7 @@ export function EvaluateForm({
 
       {provider === "grok" ? (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-          Grok sends chart context to xAI.
+          Grok sends chart context to xAI (cloud).
           {estimateChars != null ? (
             <>
               {" "}
@@ -355,11 +251,9 @@ export function EvaluateForm({
               <span className="font-medium tabular-nums">
                 {estimateChars.toLocaleString()}
               </span>{" "}
-              characters. You will confirm before any cloud call.
+              characters.
             </>
-          ) : (
-            <> You will confirm before any cloud call.</>
-          )}
+          ) : null}
         </p>
       ) : (
         <div className="space-y-1 text-xs text-zinc-500">

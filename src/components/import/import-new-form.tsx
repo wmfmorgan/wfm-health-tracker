@@ -158,7 +158,7 @@ export function ImportNewForm({
 
       {provider === "grok" ? (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-          Grok sends extracted PDF text to xAI. You will confirm before any cloud call.
+          Grok sends extracted PDF text to xAI (cloud).
         </p>
       ) : (
         <div className="space-y-1 text-xs text-zinc-500">
