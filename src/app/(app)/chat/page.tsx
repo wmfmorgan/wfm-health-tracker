@@ -1,6 +1,7 @@
 import { MEDICAL_DISCLAIMER } from "@/server/ai/safety";
 import { buildChartContext } from "@/server/ai/context";
 import { listOllamaModels } from "@/server/ai/ollama";
+import { listSkills } from "@/server/ai/skills/registry";
 import { ChatPanel } from "@/components/co-pilot/chat-panel";
 import { getThread, listThreads } from "@/server/services/chat";
 import { ensurePersonasSeeded, listPersonas } from "@/server/services/personas";
@@ -57,6 +58,12 @@ export default async function ChatPage({
       ? params.personaId
       : undefined;
 
+  const skills = listSkills().map((s) => ({
+    name: s.name,
+    description: s.description,
+    argumentHint: s.argumentHint,
+  }));
+
   return (
     <div className="text-zinc-900">
       <div className="mb-6">
@@ -96,6 +103,7 @@ export default async function ChatPage({
           preferredProvider: p.preferredProvider,
           preferredModel: p.preferredModel,
         }))}
+        skills={skills}
         defaultProvider={settings.defaultProvider}
         grokModel={settings.grokModel}
         ollamaModel={settings.ollamaModel}

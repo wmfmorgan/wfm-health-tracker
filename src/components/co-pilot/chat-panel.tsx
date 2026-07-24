@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { SlashPalette } from "@/components/co-pilot/slash-palette";
 
 export type ChatThreadDto = {
   id: string;
@@ -35,6 +36,13 @@ export type ChatMessageDto = {
   provider: string | null;
   model: string | null;
   createdAt: string;
+  skillName?: string | null;
+};
+
+export type ChatSkillOption = {
+  name: string;
+  description: string;
+  argumentHint?: string;
 };
 
 export type ChatPersonaOption = {
@@ -87,6 +95,7 @@ type Props = {
   threads: ChatThreadDto[];
   messagesByThreadId: Record<string, ChatMessageDto[]>;
   personas: ChatPersonaOption[];
+  skills: ChatSkillOption[];
   defaultProvider: "grok" | "ollama";
   grokModel: string;
   ollamaModel: string;
@@ -124,6 +133,7 @@ export function ChatPanel({
   threads: initialThreads,
   messagesByThreadId: initialMessages,
   personas,
+  skills,
   defaultProvider,
   grokModel,
   ollamaModel,
@@ -185,6 +195,8 @@ export function ChatPanel({
   });
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashFilter, setSlashFilter] = useState("");
   const suggestedModel = useMemo(
     () => (provider === "grok" ? grokModel : ollamaModel),
     [provider, grokModel, ollamaModel],
@@ -319,11 +331,11 @@ export function ChatPanel({
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         assistantMessage?: string;
+        skillName?: string | null;
         code?: string;
         charCount?: number;
         error?: string;
       };
-
 
       if (!res.ok || !data.ok || !data.assistantMessage) {
         setError(data.error || `Chat failed (${res.status})`);
@@ -346,6 +358,7 @@ export function ChatPanel({
         threadId: threadId!,
         role: "assistant",
         content: data.assistantMessage,
+        skillName: data.skillName ?? null,
         provider,
         model,
         createdAt: now,
@@ -505,6 +518,11 @@ export function ChatPanel({
                         : isSystem
                           ? "System"
                           : "Co-pilot"}
+                      {m.skillName ? (
+                        <span className="ml-1 rounded bg-zinc-200/80 px-1 py-0.5 font-mono text-[10px] font-normal normal-case text-zinc-700">
+                          /{m.skillName}
+                        </span>
+                      ) : null}
                       {m.model ? (
                         <span className="ml-1 font-normal normal-case opacity-80">
                           · {m.provider}/{m.model}
@@ -523,20 +541,51 @@ export function ChatPanel({
 
         <form
           onSubmit={onSubmit}
-          className="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm"
+          className="relative space-y-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm"
         >
-          <Label>
-            Message
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={3}
-              maxLength={8000}
-              placeholder="e.g. What do my recent iron labs look like with current supplements?"
-              disabled={busy}
-              required
+          <div className="relative">
+            <SlashPalette
+              skills={skills}
+              filter={slashFilter}
+              visible={slashOpen}
+              onSelect={(s) => {
+                setMessage(`/${s.name} `);
+                setSlashOpen(false);
+                setSlashFilter("");
+              }}
             />
-          </Label>
+            <Label>
+              Message
+              <Textarea
+                value={message}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setMessage(v);
+                  if (v.startsWith("/")) {
+                    const token = v.slice(1).split(/\s/)[0] ?? "";
+                    setSlashFilter(token);
+                    setSlashOpen(true);
+                  } else {
+                    setSlashOpen(false);
+                    setSlashFilter("");
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setSlashOpen(false);
+                }}
+                rows={3}
+                maxLength={8000}
+                placeholder="Message or / for skills (e.g. /med-check)"
+                disabled={busy}
+                required
+              />
+            </Label>
+            <p className="mt-1 text-xs text-zinc-500">
+              Type <code className="rounded bg-zinc-100 px-1">/</code> for
+              skills · <code className="rounded bg-zinc-100 px-1">/skills</code>{" "}
+              lists all
+            </p>
+          </div>
 
           {error ? (
             <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">

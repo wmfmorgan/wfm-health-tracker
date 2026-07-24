@@ -92,12 +92,22 @@ Using **Grok (xAI)** for import, chat, or evaluate sends the selected payload to
 - AI does **not** create or update medications, labs, diagnoses, or other chart records in Phase 3
 - Always review drafts before accept; treat opinions separately from chart facts
 
-### Later (not in this ship)
+### Slash skills (Chat)
 
-- Med/supplement cross-check skill
-- Lab interpretation skill beyond import
-- **FR-001** analyte lay explanations (see `docs/superpowers/specs/FUTURE-REQUIREMENTS.md`)
-- Plan synthesis across personas
+Type `/` in Chat for a skill palette. Skills use **SKILL.md** format.
+
+| Command | Purpose |
+|---------|---------|
+| `/med-check` | Med/supplement cross-check vs allergies |
+| `/lab-interpret` | Plain-language lab interpretation |
+| `/analyte-explain` | Lay definition + health impact for an analyte |
+| `/synthesize-plan` | Propose a My plan from accepted persona views |
+| `/create-skill` | Create a custom skill (enforced chat-only rules) |
+| `/delete-skill <name>` | Delete a **custom** skill only |
+| `/skills` | List all skills |
+
+Custom skills live under `data/skills/custom/<name>/SKILL.md` (included when you backup `data/`). Built-ins ship in the repo and cannot be deleted.
+
 
 ---
 
