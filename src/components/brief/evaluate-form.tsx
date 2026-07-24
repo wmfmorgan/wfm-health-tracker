@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { resolvePersonaLlm } from "@/lib/persona-llm";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,11 @@ export type EvaluatePersonaOption = {
   preferredModel?: string | null;
 };
 
+export type EvaluateEntityOption = {
+  id: string;
+  label: string;
+};
+
 type Props = {
   personas: EvaluatePersonaOption[];
   /** Optional precomputed context size (display only). */
@@ -27,7 +32,76 @@ type Props = {
   ollamaModels: string[];
   ollamaListError: string | null;
   defaultPersonaId?: string;
+  medications: EvaluateEntityOption[];
+  supplements: EvaluateEntityOption[];
+  labPanels: EvaluateEntityOption[];
+  tests: EvaluateEntityOption[];
+  procedures: EvaluateEntityOption[];
 };
+
+const PROGRESS_STEPS = [
+  "Preparing chart context…",
+  "Calling the model…",
+  "Waiting for AI response…",
+  "Validating evaluation…",
+  "Saving draft view…",
+] as const;
+
+function MultiPick({
+  label,
+  options,
+  value,
+  onChange,
+  disabled,
+  emptyHint,
+}: {
+  label: string;
+  options: EvaluateEntityOption[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+  disabled?: boolean;
+  emptyHint: string;
+}) {
+  return (
+    <Label>
+      {label}
+      {options.length === 0 ? (
+        <p className="mt-1 text-xs font-normal text-zinc-500">{emptyHint}</p>
+      ) : (
+        <>
+          <select
+            multiple
+            value={value}
+            disabled={disabled}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions).map(
+                (o) => o.value,
+              );
+              onChange(selected);
+            }}
+            className="mt-1 min-h-[6.5rem] w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+            size={Math.min(6, Math.max(3, options.length))}
+          >
+            {options.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs font-normal text-zinc-500">
+            Hold ⌘/Ctrl to select multiple. Leave empty to include defaults (all
+            active / recent).
+            {value.length > 0 ? (
+              <span className="ml-1 font-medium text-zinc-700">
+                {value.length} selected
+              </span>
+            ) : null}
+          </p>
+        </>
+      )}
+    </Label>
+  );
+}
 
 export function EvaluateForm({
   personas,
@@ -38,6 +112,11 @@ export function EvaluateForm({
   ollamaModels,
   ollamaListError,
   defaultPersonaId,
+  medications,
+  supplements,
+  labPanels,
+  tests,
+  procedures,
 }: Props) {
   const router = useRouter();
   const aiSettings = useMemo(
@@ -66,6 +145,25 @@ export function EvaluateForm({
   const [model, setModel] = useState(initialResolved.model);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [progressIndex, setProgressIndex] = useState(0);
+
+  const [medicationIds, setMedicationIds] = useState<string[]>([]);
+  const [supplementIds, setSupplementIds] = useState<string[]>([]);
+  const [labPanelIds, setLabPanelIds] = useState<string[]>([]);
+  const [testIds, setTestIds] = useState<string[]>([]);
+  const [procedureIds, setProcedureIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!pending) {
+      setProgressIndex(0);
+      return;
+    }
+    setProgressIndex(0);
+    const id = window.setInterval(() => {
+      setProgressIndex((i) => Math.min(i + 1, PROGRESS_STEPS.length - 1));
+    }, 2800);
+    return () => window.clearInterval(id);
+  }, [pending]);
 
   const suggestedModel = useMemo(
     () => (provider === "grok" ? grokModel : ollamaModel),
@@ -123,6 +221,13 @@ export function EvaluateForm({
           provider,
           model,
           replaceExistingDraft: true,
+          selection: {
+            medicationIds: medicationIds.length ? medicationIds : undefined,
+            supplementIds: supplementIds.length ? supplementIds : undefined,
+            labPanelIds: labPanelIds.length ? labPanelIds : undefined,
+            testIds: testIds.length ? testIds : undefined,
+            procedureIds: procedureIds.length ? procedureIds : undefined,
+          },
         }),
       });
 
@@ -157,10 +262,58 @@ export function EvaluateForm({
     );
   }
 
+  if (pending) {
+    const personaName =
+      personas.find((p) => p.id === personaId)?.name ?? "persona";
+    const step = PROGRESS_STEPS[progressIndex] ?? PROGRESS_STEPS[0];
+    return (
+      <div
+        className="max-w-xl rounded-lg border border-zinc-200 bg-white p-6 shadow-sm"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div className="flex items-start gap-4">
+          <div
+            className="mt-0.5 h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-900"
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-medium text-zinc-900">
+              Evaluating…
+            </h2>
+            <p className="mt-1 text-sm text-zinc-600">
+              Running{" "}
+              <span className="font-medium text-zinc-800">{personaName}</span>{" "}
+              via{" "}
+              <span className="font-medium text-zinc-800">
+                {provider === "grok" ? "Grok" : "Ollama"}
+              </span>{" "}
+              <span className="font-mono text-xs text-zinc-500">({model})</span>
+            </p>
+            <p className="mt-3 text-sm font-medium text-zinc-800">{step}</p>
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+              <div
+                className="h-full rounded-full bg-zinc-900 transition-all duration-700"
+                style={{
+                  width: `${((progressIndex + 1) / PROGRESS_STEPS.length) * 100}%`,
+                }}
+              />
+            </div>
+            <p className="mt-3 text-xs text-zinc-500">
+              This can take a while for local models or large chart context. Keep
+              this tab open.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form
       onSubmit={onSubmit}
-      className="max-w-xl space-y-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
+      className="max-w-2xl space-y-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
     >
       <Label>
         Persona
@@ -190,6 +343,55 @@ export function EvaluateForm({
           disabled={pending}
         />
       </Label>
+
+      <fieldset className="space-y-3 rounded-md border border-zinc-200 p-3">
+        <legend className="px-1 text-sm font-medium text-zinc-800">
+          Chart records to include
+        </legend>
+        <p className="text-xs text-zinc-500">
+          Optionally narrow which records are sent to the model. Empty lists use
+          defaults (active meds/supplements, recent labs/tests/procedures).
+          Profile, allergies, diagnoses, accepted views, and My plan are always
+          included.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <MultiPick
+            label="Medications"
+            options={medications}
+            value={medicationIds}
+            onChange={setMedicationIds}
+            emptyHint="No medications recorded."
+          />
+          <MultiPick
+            label="Supplements"
+            options={supplements}
+            value={supplementIds}
+            onChange={setSupplementIds}
+            emptyHint="No supplements recorded."
+          />
+          <MultiPick
+            label="Lab panels"
+            options={labPanels}
+            value={labPanelIds}
+            onChange={setLabPanelIds}
+            emptyHint="No lab panels recorded."
+          />
+          <MultiPick
+            label="Tests"
+            options={tests}
+            value={testIds}
+            onChange={setTestIds}
+            emptyHint="No tests recorded."
+          />
+          <MultiPick
+            label="Procedures"
+            options={procedures}
+            value={procedureIds}
+            onChange={setProcedureIds}
+            emptyHint="No procedures recorded."
+          />
+        </div>
+      </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Label>
@@ -247,7 +449,7 @@ export function EvaluateForm({
           {estimateChars != null ? (
             <>
               {" "}
-              Estimated payload:{" "}
+              Estimated payload (defaults):{" "}
               <span className="font-medium tabular-nums">
                 {estimateChars.toLocaleString()}
               </span>{" "}
@@ -257,7 +459,7 @@ export function EvaluateForm({
         </p>
       ) : (
         <div className="space-y-1 text-xs text-zinc-500">
-          <p>Ollama runs locally. Evaluation starts immediately.</p>
+          <p>Ollama runs locally. Evaluation starts immediately after submit.</p>
           {ollamaOptions.length === 0 ? (
             <p className="text-amber-800">
               {ollamaListError ??
@@ -275,7 +477,7 @@ export function EvaluateForm({
 
       <div className="flex flex-wrap gap-2 pt-1">
         <Button type="submit" disabled={pending || !personaId}>
-          {pending ? "Evaluating…" : "Evaluate as…"}
+          Evaluate
         </Button>
       </div>
     </form>

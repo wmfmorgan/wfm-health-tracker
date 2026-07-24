@@ -11,9 +11,9 @@ import {
 import { upsertProfile } from "@/server/services/profile";
 import { createAllergy } from "@/server/services/allergies";
 import { createDiagnosis } from "@/server/services/diagnoses";
-import { createMedication } from "@/server/services/medications";
+import { createMedication, listMedications } from "@/server/services/medications";
 import { createSupplement } from "@/server/services/supplements";
-import { createLabPanel } from "@/server/services/labs";
+import { createLabPanel, listLabPanels } from "@/server/services/labs";
 import { createClinicalTest } from "@/server/services/clinical-tests";
 import { createProcedure } from "@/server/services/procedures";
 import { ensurePersonasSeeded } from "@/server/services/personas";
@@ -418,4 +418,33 @@ describe("buildChartContext", () => {
     expect(ctx.truncated).toBe(false);
     expect(ctx.citations).toEqual([]);
   });
+
+  it("filters medications and labs by selected ids", () => {
+    seedMinimalChart();
+    const stopped = listMedications().find((m) => m.name === "Prednisone");
+    const active = listMedications().find((m) => m.name === "Mesalamine");
+    expect(stopped && active).toBeTruthy();
+
+    const onlyStopped = buildChartContext({
+      scope: {
+        medications: true,
+        medicationIds: [stopped!.id],
+      },
+    });
+    expect(onlyStopped.text).toContain("Prednisone");
+    expect(onlyStopped.text).not.toContain("Mesalamine");
+    expect(onlyStopped.text).toContain("Medications (selected)");
+
+    const panels = listLabPanels();
+    expect(panels.length).toBeGreaterThan(0);
+    const onlyLab = buildChartContext({
+      scope: {
+        labs: true,
+        labPanelIds: [panels[0]!.id],
+      },
+    });
+    expect(onlyLab.text).toContain("CBC");
+    expect(onlyLab.text).toContain("selected panels");
+  });
 });
+

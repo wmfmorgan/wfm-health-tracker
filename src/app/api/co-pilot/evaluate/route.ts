@@ -3,12 +3,23 @@ import { z } from "zod";
 import { assertAuthenticated, UnauthorizedError } from "@/server/auth/guard";
 import { runEvaluatePersona } from "@/server/ai/skills/evaluate";
 
+const idList = z.array(z.string().min(1)).optional();
+
 const bodySchema = z.object({
   personaId: z.string().min(1),
   focusNote: z.string().optional(),
   provider: z.enum(["grok", "ollama"]),
   model: z.string().min(1),
   replaceExistingDraft: z.boolean().optional(),
+  selection: z
+    .object({
+      medicationIds: idList,
+      supplementIds: idList,
+      labPanelIds: idList,
+      testIds: idList,
+      procedureIds: idList,
+    })
+    .optional(),
 });
 
 export async function POST(req: NextRequest) {

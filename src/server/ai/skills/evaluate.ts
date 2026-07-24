@@ -68,9 +68,33 @@ function buildUserMessage(opts: {
   return parts.join("\n\n");
 }
 
-export function estimateEvaluateContextChars(personaId: string): number {
+export type EvaluateEntitySelection = {
+  medicationIds?: string[];
+  supplementIds?: string[];
+  labPanelIds?: string[];
+  testIds?: string[];
+  procedureIds?: string[];
+};
+
+function buildEvaluateScope(
+  selection?: EvaluateEntitySelection,
+): ChartContextScope {
+  return {
+    ...EVALUATE_SCOPE,
+    medicationIds: selection?.medicationIds?.filter(Boolean),
+    supplementIds: selection?.supplementIds?.filter(Boolean),
+    labPanelIds: selection?.labPanelIds?.filter(Boolean),
+    testIds: selection?.testIds?.filter(Boolean),
+    procedureIds: selection?.procedureIds?.filter(Boolean),
+  };
+}
+
+export function estimateEvaluateContextChars(
+  personaId: string,
+  selection?: EvaluateEntitySelection,
+): number {
   const ctx = buildChartContext({
-    scope: EVALUATE_SCOPE,
+    scope: buildEvaluateScope(selection),
     excludePersonaId: personaId,
   });
   return ctx.charCount;
@@ -82,6 +106,7 @@ export async function runEvaluatePersona(opts: {
   provider: AIProviderId;
   model: string;
   replaceExistingDraft?: boolean;
+  selection?: EvaluateEntitySelection;
   deps?: {
     provider?: AIProvider;
     buildContext?: typeof buildChartContext;
@@ -93,12 +118,13 @@ export async function runEvaluatePersona(opts: {
     provider: providerId,
     model,
     replaceExistingDraft = true,
+    selection,
   } = opts;
 
   const buildContext = opts.deps?.buildContext ?? buildChartContext;
 
   const context: BuiltContext = buildContext({
-    scope: EVALUATE_SCOPE,
+    scope: buildEvaluateScope(selection),
     excludePersonaId: personaId,
   });
   const charCount = context.charCount;

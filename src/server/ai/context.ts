@@ -28,6 +28,16 @@ export type ChartContextScope = {
   procedures?: boolean;
   acceptedViews?: boolean;
   myPlan?: boolean;
+  /** When non-empty, only these medication ids (otherwise all active). */
+  medicationIds?: string[];
+  /** When non-empty, only these supplement ids (otherwise all active). */
+  supplementIds?: string[];
+  /** When non-empty, only these lab panel ids (otherwise recent panels). */
+  labPanelIds?: string[];
+  /** When non-empty, only these test ids (otherwise recent tests). */
+  testIds?: string[];
+  /** When non-empty, only these procedure ids (otherwise recent procedures). */
+  procedureIds?: string[];
 };
 
 export type BuiltContext = {
@@ -251,8 +261,24 @@ function formatLabPanelSummary(name: string, collectedOn: string | null, facilit
   return `- ${name}${collectedOn ? ` (${collectedOn})` : ""}${facility ? ` @ ${facility}` : ""}`;
 }
 
-function formatLabsSections(): { detail: Section; summary: Section } {
-  const panels = listLabPanels().slice(0, RECENT_LAB_PANELS);
+function filterByIds<T extends { id: string }>(
+  rows: T[],
+  ids: string[] | undefined,
+): T[] {
+  if (!ids || ids.length === 0) return rows;
+  const set = new Set(ids);
+  return rows.filter((r) => set.has(r.id));
+}
+
+function formatLabsSections(labPanelIds?: string[]): {
+  detail: Section;
+  summary: Section;
+} {
+  const all = listLabPanels();
+  const panels =
+    labPanelIds && labPanelIds.length > 0
+      ? filterByIds(all, labPanelIds)
+      : all.slice(0, RECENT_LAB_PANELS);
   const citations: Citation[] = panels.map((p) => ({
     entityType: "lab_panel",
     entityId: p.id,
@@ -273,24 +299,37 @@ function formatLabsSections(): { detail: Section; summary: Section } {
           .map((p) => formatLabPanelSummary(p.name, p.collectedOn, p.facility))
           .join("\n");
 
+  const title =
+    labPanelIds && labPanelIds.length > 0
+      ? "Labs (selected panels with results)"
+      : "Labs (recent panels with results)";
+  const summaryTitle =
+    labPanelIds && labPanelIds.length > 0
+      ? "Labs (selected panel list only; details truncated)"
+      : "Labs (recent panel list only; details truncated)";
+
   return {
     detail: {
       id: "labs-detail",
       dropPriority: 100, // drop first
-      text: `## Labs (recent panels with results)\n${detailBody}`,
+      text: `## ${title}\n${detailBody}`,
       citations,
     },
     summary: {
       id: "labs-summary",
       dropPriority: 50,
-      text: `## Labs (recent panel list only; details truncated)\n${summaryBody}`,
+      text: `## ${summaryTitle}\n${summaryBody}`,
       citations,
     },
   };
 }
 
-function formatTestsSection(): Section {
-  const rows = listClinicalTests().slice(0, RECENT_TESTS);
+function formatTestsSection(testIds?: string[]): Section {
+  const all = listClinicalTests();
+  const rows =
+    testIds && testIds.length > 0
+      ? filterByIds(all, testIds)
+      : all.slice(0, RECENT_TESTS);
   const citations: Citation[] = rows.map((t) => ({
     entityType: "test",
     entityId: t.id,
@@ -321,8 +360,12 @@ function formatTestsSection(): Section {
   };
 }
 
-function formatProceduresSection(): Section {
-  const rows = listProcedures().slice(0, RECENT_PROCEDURES);
+function formatProceduresSection(procedureIds?: string[]): Section {
+  const all = listProcedures();
+  const rows =
+    procedureIds && procedureIds.length > 0
+      ? filterByIds(all, procedureIds)
+      : all.slice(0, RECENT_PROCEDURES);
   const citations: Citation[] = rows.map((p) => ({
     entityType: "procedure",
     entityId: p.id,
@@ -431,30 +474,46 @@ export function buildChartContext(opts: {
   if (scope.allergies) core.push(formatAllergiesSection());
   if (scope.diagnoses) core.push(formatDiagnosesSection());
   if (scope.medications) {
+    const allActive = listMedications({ status: "active" });
+    const all = listMedications();
+    const rows =
+      scope.medicationIds && scope.medicationIds.length > 0
+        ? filterByIds(all, scope.medicationIds)
+        : allActive;
     core.push(
       formatMedOrSupp(
         "medication",
-        "Medications (active)",
-        listMedications({ status: "active" }),
+        scope.medicationIds?.length
+          ? "Medications (selected)"
+          : "Medications (active)",
+        rows,
       ),
     );
   }
   if (scope.supplements) {
+    const allActive = listSupplements({ status: "active" });
+    const all = listSupplements();
+    const rows =
+      scope.supplementIds && scope.supplementIds.length > 0
+        ? filterByIds(all, scope.supplementIds)
+        : allActive;
     core.push(
       formatMedOrSupp(
         "supplement",
-        "Supplements (active)",
-        listSupplements({ status: "active" }),
+        scope.supplementIds?.length
+          ? "Supplements (selected)"
+          : "Supplements (active)",
+        rows,
       ),
     );
   }
   if (scope.labs) {
-    const labs = formatLabsSections();
+    const labs = formatLabsSections(scope.labPanelIds);
     labDetail = labs.detail;
     labSummary = labs.summary;
   }
-  if (scope.tests) core.push(formatTestsSection());
-  if (scope.procedures) core.push(formatProceduresSection());
+  if (scope.tests) core.push(formatTestsSection(scope.testIds));
+  if (scope.procedures) core.push(formatProceduresSection(scope.procedureIds));
 
   if (scope.acceptedViews) {
     const views = listCurrentAcceptedViews({
