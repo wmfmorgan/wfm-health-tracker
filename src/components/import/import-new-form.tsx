@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { ImportProgress } from "@/components/import/import-progress";
 
 type Props = {
   defaultProvider: "grok" | "ollama";
@@ -35,6 +36,7 @@ export function ImportNewForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [filename, setFilename] = useState<string | null>(null);
 
   const suggestedModel = useMemo(
     () => (provider === "grok" ? grokModel : ollamaModel),
@@ -63,6 +65,10 @@ export function ImportNewForm({
     try {
       const form = e.currentTarget;
       const formData = new FormData(form);
+      const file = formData.get("file");
+      if (file instanceof File && file.name) {
+        setFilename(file.name);
+      }
       const res = await fetch("/api/import/upload", {
         method: "POST",
         body: formData,
@@ -87,6 +93,17 @@ export function ImportNewForm({
     }
   }
 
+  if (pending) {
+    return (
+      <ImportProgress
+        provider={provider}
+        model={model}
+        filename={filename}
+        active
+      />
+    );
+  }
+
   return (
     <form
       onSubmit={onSubmit}
@@ -100,6 +117,10 @@ export function ImportNewForm({
           accept="application/pdf,.pdf"
           required
           disabled={pending}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            setFilename(f?.name ?? null);
+          }}
         />
       </Label>
       <p className="text-xs text-zinc-500">
@@ -180,7 +201,7 @@ export function ImportNewForm({
 
       <div className="flex flex-wrap gap-2 pt-1">
         <Button type="submit" disabled={pending}>
-          {pending ? "Uploading…" : "Start import"}
+          Start import
         </Button>
         <Link href="/import">
           <Button type="button" variant="secondary" disabled={pending}>

@@ -11,6 +11,7 @@ import {
 } from "@/server/actions/imports";
 import { AutoRefresh } from "@/components/import/auto-refresh";
 import { DraftPanelCard } from "@/components/import/draft-panel-card";
+import { ImportProgress } from "@/components/import/import-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -122,17 +123,19 @@ export default async function ImportJobDetailPage({
       {job.status === "pending" ||
       job.status === "extracting" ||
       job.status === "awaiting_cloud_confirm" ? (
-        <div className="max-w-xl rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+        <div>
           <AutoRefresh intervalMs={2000} />
-          <p className="text-sm font-medium text-zinc-900">Extracting…</p>
-          <p className="mt-1 text-sm text-zinc-600">
-            Running AI extraction. This page refreshes automatically.
-          </p>
-          {job.extractedCharCount != null ? (
-            <p className="mt-2 text-xs tabular-nums text-zinc-500">
-              {job.extractedCharCount.toLocaleString()} characters extracted from PDF
-            </p>
-          ) : null}
+          <ImportProgress
+            provider={job.provider}
+            model={job.model}
+            filename={filename}
+            active
+            detail={
+              job.extractedCharCount != null
+                ? `${job.extractedCharCount.toLocaleString()} characters extracted from PDF`
+                : null
+            }
+          />
         </div>
       ) : null}
 
