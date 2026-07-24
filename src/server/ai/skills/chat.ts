@@ -13,6 +13,14 @@ import {
   listMessages,
 } from "@/server/services/chat";
 import { getAiSettings } from "@/server/services/settings";
+import { getSkill, parseSlashCommand } from "@/server/ai/skills/registry";
+import { runSkillInChat } from "@/server/ai/skills/runner";
+import {
+  createSkillHelpMessage,
+  formatSkillsList,
+  handleCreateSkillSave,
+  handleDeleteSkill,
+} from "@/server/ai/skills/meta-skills";
 
 const HISTORY_LIMIT = 20;
 
@@ -92,7 +100,7 @@ export async function runChatTurn(opts: {
     provider?: AIProvider;
     buildContext?: typeof buildChartContext;
   };
-}): Promise<{ assistantMessage: string }> {
+}): Promise<{ assistantMessage: string; skillName?: string }> {
   const {
     threadId,
     userMessage,
@@ -112,21 +120,115 @@ export async function runChatTurn(opts: {
     throw new Error(`Chat thread not found: ${threadId}`);
   }
 
+  // Slash commands / skills
+  const slash = parseSlashCommand(content);
+  if (slash) {
+    if (slash.skillName === "skills" || slash.skillName === "help") {
+      addMessage({ threadId, role: "user", content });
+      const msg = formatSkillsList();
+      addMessage({
+        threadId,
+        role: "assistant",
+        content: msg,
+        provider: providerId,
+        model,
+      });
+      return { assistantMessage: msg, skillName: slash.skillName };
+    }
+
+    if (slash.skillName === "delete-skill") {
+      addMessage({ threadId, role: "user", content });
+      const meta = handleDeleteSkill(slash.args);
+      addMessage({
+        threadId,
+        role: "assistant",
+        content: meta.assistantMessage,
+        provider: providerId,
+        model,
+      });
+      return {
+        assistantMessage: meta.assistantMessage,
+        skillName: meta.skillName,
+      };
+    }
+
+    if (slash.skillName === "create-skill") {
+      const saved = handleCreateSkillSave(slash.args);
+      if (saved) {
+        addMessage({ threadId, role: "user", content });
+        addMessage({
+          threadId,
+          role: "assistant",
+          content: saved.assistantMessage,
+          provider: providerId,
+          model,
+        });
+        return {
+          assistantMessage: saved.assistantMessage,
+          skillName: saved.skillName,
+        };
+      }
+      if (!slash.args.trim()) {
+        addMessage({ threadId, role: "user", content });
+        const help = createSkillHelpMessage();
+        addMessage({
+          threadId,
+          role: "assistant",
+          content: help,
+          provider: providerId,
+          model,
+        });
+        return { assistantMessage: help, skillName: "create-skill" };
+      }
+      // Incomplete create → LLM helps draft using create-skill body
+      return runSkillInChat({
+        skillName: "create-skill",
+        args: slash.args,
+        threadId,
+        personaId: null,
+        provider: providerId,
+        model,
+        scope,
+        deps: opts.deps,
+      });
+    }
+
+    if (!getSkill(slash.skillName)) {
+      addMessage({ threadId, role: "user", content });
+      const assistantMessage = `Unknown skill \`/${slash.skillName}\`.\n\nType \`/skills\` to list available skills, or \`/create-skill\` to author a custom one.`;
+      addMessage({
+        threadId,
+        role: "assistant",
+        content: assistantMessage,
+        provider: providerId,
+        model,
+      });
+      return { assistantMessage, skillName: slash.skillName };
+    }
+
+    return runSkillInChat({
+      skillName: slash.skillName,
+      args: slash.args,
+      threadId,
+      personaId,
+      provider: providerId,
+      model,
+      scope,
+      deps: opts.deps,
+    });
+  }
+
   const buildContext = opts.deps?.buildContext ?? buildChartContext;
   const context = buildContext({
     scope,
-    // When chatting under a persona lens, still include that persona's accepted
-    // view if present — chat is not rewriting it. No excludePersonaId.
   });
 
-  // Persist user message first so history includes it.
   addMessage({
     threadId,
     role: "user",
     content,
   });
 
-  // Last ~20 messages (includes the user message just written), oldest first.
   const recentDesc = listMessages(threadId, {
     limit: HISTORY_LIMIT,
     order: "desc",
@@ -157,6 +259,5 @@ export async function runChatTurn(opts: {
     model,
   });
 
-  // Intentionally never calls createDraftView / brief memory writers.
   return { assistantMessage: assistantText };
 }

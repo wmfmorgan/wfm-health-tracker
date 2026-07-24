@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { resolvePersonaLlm } from "@/lib/persona-llm";
 import { Button } from "@/components/ui/button";
@@ -190,9 +191,9 @@ export function EvaluateForm({
     return (
       <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm text-zinc-500">
         No enabled personas available for evaluation.{" "}
-        <a href="/personas" className="font-medium text-zinc-800 underline">
+        <Link href="/personas" className="font-medium text-zinc-800 underline">
           Manage personas
-        </a>
+        </Link>
       </div>
     );
   }

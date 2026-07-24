@@ -52,8 +52,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { assistantMessage } = await runChatTurn(parsed.data);
-    return NextResponse.json({ ok: true as const, assistantMessage });
+    const { assistantMessage, skillName } = await runChatTurn(parsed.data);
+    return NextResponse.json({
+      ok: true as const,
+      assistantMessage,
+      skillName: skillName ?? null,
+    });
   } catch (e) {
     if (e instanceof UnauthorizedError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
