@@ -82,7 +82,7 @@ export default async function PersonasPage() {
                       </Button>
                     </Link>
                     <Link
-                      href={`/evaluate?personaId=${encodeURIComponent(p.id)}`}
+                      href={`/brief?personaId=${encodeURIComponent(p.id)}`}
                     >
                       <Button type="button" size="sm" variant="secondary">
                         Evaluate

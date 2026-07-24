@@ -357,7 +357,7 @@ export function PersonaSetupForm({
           </Button>
         )}
         <Link
-          href={`/evaluate?personaId=${encodeURIComponent(persona.id)}`}
+          href={`/brief?personaId=${encodeURIComponent(persona.id)}`}
           className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
         >
           Evaluate as this persona

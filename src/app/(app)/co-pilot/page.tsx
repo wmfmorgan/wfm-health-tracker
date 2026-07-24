@@ -16,7 +16,7 @@ export default async function CoPilotRedirectPage({
     : "";
 
   if (params.tab === "evaluate") {
-    redirect(`/evaluate${personaQs}`);
+    redirect(`/brief${personaQs}`);
   }
   redirect(`/chat${personaQs}`);
 }

@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { MEDICAL_DISCLAIMER } from "@/server/ai/safety";
+import { estimateEvaluateContextChars } from "@/server/ai/skills/evaluate";
+import { listOllamaModels } from "@/server/ai/ollama";
+import { EvaluateForm } from "@/components/brief/evaluate-form";
 import { ExportBriefButton } from "@/components/brief/export-brief-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,15 +16,43 @@ import {
   listTopicConflicts,
   listViewsForPersona,
 } from "@/server/services/brief";
+import { listClinicalTests } from "@/server/services/clinical-tests";
+import { listLabPanels } from "@/server/services/labs";
+import { listMedications } from "@/server/services/medications";
 import { ensurePersonasSeeded, listPersonas } from "@/server/services/personas";
+import { listProcedures } from "@/server/services/procedures";
+import { getAiSettings } from "@/server/services/settings";
+import { listSupplements } from "@/server/services/supplements";
 
 export const dynamic = "force-dynamic";
+
+type SearchParams = Promise<{ personaId?: string }>;
 
 /** React form `action` types expect void; keep structured action results for callers. */
 function asFormAction(
   fn: (...args: never[]) => unknown,
 ): (formData: FormData) => Promise<void> {
   return fn as (formData: FormData) => Promise<void>;
+}
+
+function medLabel(m: {
+  name: string;
+  dose: string | null;
+  status: string;
+}): string {
+  const dose = m.dose ? ` · ${m.dose}` : "";
+  const status = m.status !== "active" ? ` (${m.status})` : "";
+  return `${m.name}${dose}${status}`;
+}
+
+function datedLabel(
+  name: string,
+  date: string | null | undefined,
+  extra?: string | null,
+): string {
+  const d = date ? ` · ${date}` : "";
+  const e = extra ? ` · ${extra}` : "";
+  return `${name}${d}${e}`;
 }
 
 function buildExportMarkdown(opts: {
@@ -60,16 +91,59 @@ function buildExportMarkdown(opts: {
   return parts.filter((line, i, arr) => !(line === "" && arr[i - 1] === "")).join("\n");
 }
 
-export default async function BriefPage() {
+export default async function BriefPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await searchParams;
+
   ensurePersonasSeeded();
   const personas = listPersonas({ enabledOnly: true });
+  const settings = getAiSettings();
+  const ollamaCatalog = await listOllamaModels(settings.ollamaBaseUrl);
+
   const accepted = listCurrentAcceptedViews();
   const plan = getMyPlan();
   const planBody = plan?.bodyMd ?? "";
   const conflicts = listTopicConflicts();
 
+  const medications = listMedications().map((m) => ({
+    id: m.id,
+    label: medLabel(m),
+  }));
+  const supplements = listSupplements().map((s) => ({
+    id: s.id,
+    label: medLabel(s),
+  }));
+  const labPanels = listLabPanels().map((p) => ({
+    id: p.id,
+    label: datedLabel(p.name, p.collectedOn, p.facility),
+  }));
+  const tests = listClinicalTests().map((t) => ({
+    id: t.id,
+    label: datedLabel(t.name, t.performedOn, t.type),
+  }));
+  const procedures = listProcedures().map((p) => ({
+    id: p.id,
+    label: datedLabel(p.name, p.performedOn, p.facility),
+  }));
+
+  const contextCharEstimates: Record<string, number> = {};
+  for (const p of personas) {
+    try {
+      contextCharEstimates[p.id] = estimateEvaluateContextChars(p.id);
+    } catch {
+      contextCharEstimates[p.id] = 0;
+    }
+  }
+
+  const defaultPersonaId =
+    params.personaId && personas.some((p) => p.id === params.personaId)
+      ? params.personaId
+      : undefined;
+
   const personaNameById = new Map(personas.map((p) => [p.id, p.name]));
-  // Include names for accepted views whose persona may be disabled
   for (const v of accepted) {
     if (!personaNameById.has(v.personaId)) {
       personaNameById.set(v.personaId, v.personaName);
@@ -91,21 +165,49 @@ export default async function BriefPage() {
     <div className="text-zinc-900">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Chart brief</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Evaluation &amp; Briefs
+          </h1>
           <p className="mt-1 text-sm text-zinc-600">
-            Multi-persona reviewed views and your personal plan. Accept drafts before
-            they become brief memory.
+            Run a persona evaluation over selected chart records, then review and
+            accept drafts into multi-persona briefs.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/evaluate">
-            <Button type="button" variant="secondary">
-              Open Evaluate
-            </Button>
+          <Link
+            href="/personas"
+            className="text-sm text-zinc-600 underline-offset-2 hover:underline"
+          >
+            Manage personas
           </Link>
           <ExportBriefButton markdown={exportMarkdown} />
         </div>
       </div>
+
+      <section className="mb-10">
+        <h2 className="mb-3 text-lg font-medium">Evaluate</h2>
+        <EvaluateForm
+          personas={personas.map((p) => ({
+            id: p.id,
+            name: p.name,
+            specialty: p.specialty,
+            preferredProvider: p.preferredProvider,
+            preferredModel: p.preferredModel,
+          }))}
+          contextCharEstimates={contextCharEstimates}
+          defaultProvider={settings.defaultProvider}
+          grokModel={settings.grokModel}
+          ollamaModel={settings.ollamaModel}
+          ollamaModels={ollamaCatalog.models.map((m) => m.name)}
+          ollamaListError={ollamaCatalog.error}
+          defaultPersonaId={defaultPersonaId}
+          medications={medications}
+          supplements={supplements}
+          labPanels={labPanels}
+          tests={tests}
+          procedures={procedures}
+        />
+      </section>
 
       {conflicts.length > 0 ? (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
@@ -131,7 +233,7 @@ export default async function BriefPage() {
       ) : null}
 
       <section className="mb-8">
-        <h2 className="mb-3 text-lg font-medium">Personas</h2>
+        <h2 className="mb-3 text-lg font-medium">Persona briefs</h2>
         {personaRows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
             No personas enabled.
@@ -151,9 +253,7 @@ export default async function BriefPage() {
                         {persona.specialty}
                       </span>
                     ) : null}
-                    {draft ? (
-                      <Badge variant="warning">draft</Badge>
-                    ) : null}
+                    {draft ? <Badge variant="warning">draft</Badge> : null}
                     {current ? (
                       <Badge variant="success">accepted v{current.version}</Badge>
                     ) : (
@@ -182,7 +282,7 @@ export default async function BriefPage() {
                     </Link>
                   ) : null}
                   <Link
-                    href={`/evaluate?personaId=${encodeURIComponent(persona.id)}`}
+                    href={`/brief?personaId=${encodeURIComponent(persona.id)}`}
                   >
                     <Button type="button" size="sm" variant="secondary">
                       Evaluate
@@ -220,17 +320,6 @@ export default async function BriefPage() {
             ) : null}
           </div>
         </form>
-      </section>
-
-      <section className="mb-8 rounded-lg border border-zinc-200 bg-zinc-50 p-5">
-        <h2 className="mb-1 text-lg font-medium">Evaluate as…</h2>
-        <p className="mb-3 text-sm text-zinc-600">
-          Run a persona lens over the chart. Output is a draft view you can edit,
-          accept, or reject.
-        </p>
-        <Link href="/evaluate">
-          <Button type="button">Open Evaluate</Button>
-        </Link>
       </section>
 
       <p className="mt-8 text-xs text-zinc-500">{MEDICAL_DISCLAIMER}</p>

@@ -385,8 +385,8 @@ export function ChatPanel({
   }
 
   const evaluateHref = personaId
-    ? `/evaluate?personaId=${encodeURIComponent(personaId)}`
-    : "/evaluate";
+    ? `/brief?personaId=${encodeURIComponent(personaId)}`
+    : "/brief";
 
   const busy = sending || isPending;
 
@@ -669,7 +669,7 @@ export function ChatPanel({
             >
               {personaId
                 ? "Evaluate with this persona"
-                : "Open Evaluate"}
+                : "Open Evaluation & Briefs"}
             </Link>
             <Link
               href="/brief"
