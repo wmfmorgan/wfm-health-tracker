@@ -223,6 +223,7 @@ Keep backups offline or encrypted if they leave this machine.
 ## Out of scope (later)
 
 - Phase 4: encrypted backup export, stronger lock UX
+- FR-002: cloud-data audit log (see `docs/superpowers/specs/FUTURE-REQUIREMENTS.md`)
 - OCR for scanned PDFs
 - Med check, lab interpret skills, FR-001 analyte lay explanations
 - Symptom journals, multi-user, mobile apps

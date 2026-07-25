@@ -76,8 +76,75 @@ Alternatively: separate `analyte_explanations` table keyed by `analyte_id` + pro
 
 ---
 
+## FR-002: Cloud-data audit log
+
+**Status:** Backlog (was briefly listed under Phase 4 Hardening; pulled out so Phase 4 stays backup + lock focus)  
+**Priority:** Medium (privacy visibility when using Grok / any cloud AI)  
+**Depends on:** Dual AI provider router (done); import, evaluate, chat call sites (done)
+
+### Problem
+
+When Grok (or any future cloud path) is used, PHI may leave the machine. Today the app shows **in-the-moment** warnings and size hints on some flows, but there is **no durable, user-visible history** of what left, when, or from which feature. Per-import cloud confirm was also removed, so post-hoc visibility matters more.
+
+### Desired capability
+
+A **user-visible audit of cloud AI usage** — metadata about sends, not a silent black box.
+
+| Content | Description |
+|---------|-------------|
+| **When** | Timestamp of the cloud call |
+| **Surface** | Which feature triggered it (import extract, evaluate, chat, skill, …) |
+| **Provider / model** | e.g. Grok + model id |
+| **Scale** | Approximate payload size (chars / tokens estimate) |
+| **Outcome** | Success / failure (optional short error class) |
+
+Ollama / local paths should either be omitted or clearly labeled **local (not cloud)**.
+
+### UX (draft)
+
+- **Settings** (or a small “Privacy / Cloud activity” page): reverse-chronological list of cloud events  
+- Optional filters: surface, date range  
+- Empty state: “No cloud AI calls recorded” when user only uses Ollama  
+- Do **not** dump full prompt/chart text in the default UI (metadata-first for safety and storage)
+
+### Data (draft)
+
+Append-only events table, e.g. `ai_cloud_events`:
+
+- `id`, `created_at`  
+- `surface` — `import` | `evaluate` | `chat` | `skill` | …  
+- `provider`, `model`  
+- `approx_char_count` (or similar)  
+- `ok` / `error_code` (optional)  
+- Optional later: redacted preview hash or retention policy  
+
+Stay inside `data/` so backup of the folder includes the audit log.
+
+### Out of scope for this FR
+
+- Encrypted backup export (Phase 4)  
+- Stronger app lock UX (Phase 4)  
+- Storing full request/response bodies by default  
+- Multi-device sync or remote audit dashboards  
+
+### Acceptance criteria (when built)
+
+1. Every successful (and failed, if feasible) **cloud** AI call appends an audit row  
+2. User can open a list of past cloud events with when / surface / model / size  
+3. Local-only (Ollama) usage does not look like cloud sends  
+4. Audit log lives under `data/` and is part of the normal backup unit  
+5. UI still shows assistive / not medical advice where relevant; audit is privacy tooling, not clinical history  
+
+### Related
+
+- Phase map: Phase 4 no longer includes this (see `2026-07-22-wfm-health-tracker-design.md`)  
+- Phase 2/3 privacy patterns: dual provider, Grok disclosure, former per-request confirm  
+
+---
+
 ## FR backlog index
 
 | ID | Title | Phase hint |
 |----|--------|------------|
-| FR-001 | Lab analyte lay explanations (AI) | Phase 3 / lab literacy |
+| FR-001 | Lab analyte lay explanations (AI) | Lab literacy / co-pilot polish |
+| FR-002 | Cloud-data audit log | Privacy backlog (not Phase 4) |
