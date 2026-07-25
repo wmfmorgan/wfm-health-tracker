@@ -63,6 +63,70 @@ export async function listOllamaModels(
   }
 }
 
+export type WarmOllamaResult =
+  | { ok: true; model: string; keepAlive: string | number }
+  | { ok: false; error: string };
+
+/**
+ * Preload a model into Ollama memory (empty generate) so the next chat/extract
+ * skips cold load. Default keep-alive holds the model for 30 minutes.
+ */
+export async function warmOllamaModel(
+  baseUrl: string,
+  model: string,
+  opts?: { keepAlive?: string | number; timeoutMs?: number },
+): Promise<WarmOllamaResult> {
+  const base = normalizeBaseUrl(baseUrl);
+  const name = model.trim();
+  if (!base) {
+    return { ok: false, error: "Ollama base URL is empty" };
+  }
+  if (!name) {
+    return { ok: false, error: "Model name is required" };
+  }
+
+  const keepAlive = opts?.keepAlive ?? "30m";
+  const timeoutMs = opts?.timeoutMs ?? 180_000;
+
+  try {
+    const res = await fetch(`${base}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        model: name,
+        keep_alive: keepAlive,
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return {
+        ok: false,
+        error: `Ollama warm failed (${res.status}): ${body.slice(0, 200) || res.statusText}`,
+      };
+    }
+
+    // Consume body so the connection can close cleanly.
+    await res.json().catch(() => null);
+
+    return { ok: true, model: name, keepAlive };
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : String(e);
+    if (detail.includes("TimeoutError") || detail.includes("timed out") || detail.includes("aborted")) {
+      return {
+        ok: false,
+        error: `Timed out warming ${name} after ${Math.round(timeoutMs / 1000)}s. Is Ollama running, and is the model pulled?`,
+      };
+    }
+    return {
+      ok: false,
+      error: `Could not reach Ollama at ${base} (${detail})`,
+    };
+  }
+}
+
 export class OllamaProvider implements AIProvider {
   readonly id = "ollama" as const;
 

@@ -250,6 +250,11 @@ describe("import pipeline", () => {
 
   it("startImportFromPdf ollama path extracts and writes ready drafts", async () => {
     const extractLabs = vi.fn(async () => sampleExtracted(1));
+    const warmModel = vi.fn(async () => ({
+      ok: true as const,
+      model: "llama3.2",
+      keepAlive: "30m" as const,
+    }));
     const fakeProvider: AIProvider = {
       id: "ollama",
       completeJson: async () => ({ panels: [] }),
@@ -268,6 +273,7 @@ describe("import pipeline", () => {
             extractPdfText: async () => sampleText,
             extractLabs,
             getProvider: () => fakeProvider,
+            warmModel,
           }),
       },
     });
@@ -278,6 +284,7 @@ describe("import pipeline", () => {
     expect(job.drafts).toHaveLength(1);
     expect(job.drafts[0].name).toBe("CBC");
     expect(job.drafts[0].results[0].analyteName).toBe("WBC");
+    expect(warmModel).toHaveBeenCalledOnce();
     expect(extractLabs).toHaveBeenCalledOnce();
   });
 

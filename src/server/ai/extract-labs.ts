@@ -1,4 +1,5 @@
 import { normalizeLabFlag } from "@/lib/ai/flags";
+import { normalizeIsoDate } from "@/lib/dates";
 import {
   extractedLabsSchema,
   type ExtractedLabs,
@@ -31,10 +32,11 @@ Return a single JSON object with this shape:
     }
   ]
 }
+collectedOn is the specimen collection / draw / specimen date for the panel (not the report print date, unless that is the only date shown). Prefer Collection Date, Drawn, Specimen, or Date of Service. Always output as YYYY-MM-DD when a date is present.
 Use flag H for high, L for low, normal for in-range, critical for critical, unknown when unclear.
 If no labs are found, return {"panels": []}.`;
 
-function preprocessFlags(raw: unknown): unknown {
+function preprocessExtracted(raw: unknown): unknown {
   if (!raw || typeof raw !== "object") return raw;
   const obj = raw as Record<string, unknown>;
   const panels = obj.panels;
@@ -45,16 +47,26 @@ function preprocessFlags(raw: unknown): unknown {
     panels: panels.map((panel) => {
       if (!panel || typeof panel !== "object") return panel;
       const p = panel as Record<string, unknown>;
+
+      // Accept camelCase or snake_case from models
+      const collectedRaw =
+        p.collectedOn ?? p.collected_on ?? p.collectionDate ?? p.collection_date;
+      const collectedOn = normalizeIsoDate(collectedRaw);
+
       const results = p.results;
-      if (!Array.isArray(results)) return panel;
+      const normalizedResults = Array.isArray(results)
+        ? results.map((result) => {
+            if (!result || typeof result !== "object") return result;
+            const r = result as Record<string, unknown>;
+            if (!("flag" in r)) return r;
+            return { ...r, flag: normalizeLabFlag(r.flag) };
+          })
+        : results;
+
       return {
         ...p,
-        results: results.map((result) => {
-          if (!result || typeof result !== "object") return result;
-          const r = result as Record<string, unknown>;
-          if (!("flag" in r)) return r;
-          return { ...r, flag: normalizeLabFlag(r.flag) };
-        }),
+        collectedOn,
+        results: normalizedResults,
       };
     }),
   };
@@ -81,7 +93,7 @@ export async function extractLabsFromText(opts: {
     model,
   });
 
-  let parsed = extractedLabsSchema.safeParse(preprocessFlags(raw));
+  let parsed = extractedLabsSchema.safeParse(preprocessExtracted(raw));
   if (parsed.success) {
     return parsed.data;
   }
@@ -93,7 +105,7 @@ export async function extractLabsFromText(opts: {
     model,
   });
 
-  parsed = extractedLabsSchema.safeParse(preprocessFlags(raw));
+  parsed = extractedLabsSchema.safeParse(preprocessExtracted(raw));
   if (parsed.success) {
     return parsed.data;
   }

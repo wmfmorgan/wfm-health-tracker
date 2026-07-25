@@ -69,11 +69,18 @@ export async function retryImportAction(jobId: string) {
 }
 
 export async function acceptDraftPanelAction(draftPanelId: string) {
-  const { labPanelId } = acceptDraftPanel(draftPanelId);
+  const { labPanelId, importJobId, jobStatus } = acceptDraftPanel(draftPanelId);
   revalidatePath("/import", "layout");
   revalidatePath("/labs");
   revalidatePath(`/labs/${labPanelId}`);
   revalidatePath("/documents");
+  revalidatePath(`/import/${importJobId}`);
+
+  // All drafts resolved with at least one accept → back to import list
+  if (jobStatus === "completed") {
+    redirect("/import");
+  }
+
   return { ok: true as const, labPanelId };
 }
 
@@ -85,8 +92,13 @@ export async function rejectDraftPanelAction(draftPanelId: string) {
 }
 
 export async function acceptAllPendingAction(jobId: string) {
-  acceptAllPending(jobId);
+  const { jobStatus } = acceptAllPending(jobId);
   revalidateImportPaths(jobId);
+
+  if (jobStatus === "completed") {
+    redirect("/import");
+  }
+
   return { ok: true as const };
 }
 

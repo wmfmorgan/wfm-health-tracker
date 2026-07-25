@@ -1,41 +1,12 @@
 "use client";
 
 import { AiProgress } from "@/components/ui/ai-progress";
+import {
+  buildImportSteps,
+  importMinStepIndex,
+} from "@/lib/import-progress-steps";
 
-/** Stage labels for import — mirrors Evaluate’s staged checklist. */
-export function buildImportSteps(providerLabel: string): string[] {
-  return [
-    "Uploading PDF…",
-    "Extracting text layer…",
-    `Calling ${providerLabel}…`,
-    "Waiting for AI response…",
-    "Parsing structured lab drafts…",
-    "Saving draft panels for review…",
-  ];
-}
-
-/**
- * Map job status / extracted text to a minimum stage so progress reflects
- * real server state while still animating through the AI wait stages.
- *
- * Steps: 0 upload · 1 text · 2 call AI · 3 wait · 4 parse · 5 save
- */
-export function importMinStepIndex(opts: {
-  status?: string | null;
-  extractedCharCount?: number | null;
-}): number {
-  const { status, extractedCharCount } = opts;
-  if (status === "extracting" || status === "awaiting_cloud_confirm") {
-    // Text done; AI call in flight
-    return extractedCharCount != null && extractedCharCount > 0 ? 2 : 1;
-  }
-  if (status === "pending") {
-    if (extractedCharCount != null && extractedCharCount > 0) return 2;
-    return 0;
-  }
-  if (status === "ready" || status === "completed") return 5;
-  return 0;
-}
+export { buildImportSteps, importMinStepIndex };
 
 type Props = {
   provider: "grok" | "ollama" | string;
@@ -69,7 +40,11 @@ export function ImportProgress({
         ? "Ollama"
         : String(provider);
 
-  const minStepIndex = importMinStepIndex({ status, extractedCharCount });
+  const minStepIndex = importMinStepIndex({
+    status,
+    extractedCharCount,
+    provider,
+  });
 
   const subtitle = (
     <>
@@ -97,9 +72,11 @@ export function ImportProgress({
     <AiProgress
       title="Importing…"
       subtitle={subtitle}
-      steps={buildImportSteps(providerLabel)}
+      steps={buildImportSteps(providerLabel, provider)}
       active={active}
       minStepIndex={minStepIndex}
+      // Ollama warm can take a while; advance stages a bit slower
+      intervalMs={provider === "ollama" ? 3200 : 2600}
       detail={
         detailNode ? (
           <span className="tabular-nums">{detailNode}</span>
@@ -107,8 +84,9 @@ export function ImportProgress({
       }
       footer={
         <p className="mt-3 text-xs text-zinc-500">
-          This can take a while for local models or large PDFs. Keep this tab
-          open until drafts appear for review.
+          {provider === "ollama"
+            ? "Local models may need a minute to load into memory on first use. Keep this tab open until drafts appear for review."
+            : "This can take a while for large PDFs. Keep this tab open until drafts appear for review."}
         </p>
       }
     />

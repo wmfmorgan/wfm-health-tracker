@@ -802,6 +802,71 @@ Always show **assistive / not medical advice** disclaimer.
 
 ---
 
+## FR-017: Doctor-visit notes on labs and tests
+
+**Status:** Backlog  
+**Priority:** Medium–high (visit prep + post-visit memory; chronic care)  
+**Depends on:** Lab panels (done); clinical tests (done); optional procedures later  
+
+### Problem
+
+When discussing a **lab panel** or **clinical test** with a doctor, the user wants to capture what was said, questions asked, decisions, and follow-ups **on that record**. Today each lab/test has only a single free-text `notes` field mixed with result/import notes—there is no clear place for **visit-oriented, dated discussion notes** (prep before the appointment or write-up after).
+
+### Desired capability
+
+Attach **clinical discussion notes** to labs and tests:
+
+| Area | Description |
+|------|-------------|
+| **Targets** | Lab panels and clinical tests (v1); procedures optional later |
+| **Multiple notes** | Several notes per entity over time (not one overwrite-only blob) |
+| **Dating** | Note date (visit / discussion date), distinct from lab `collectedOn` / test `performedOn` |
+| **Content** | Free-text body; optional short title or tags (e.g. prep, visit, follow-up) |
+| **UX** | Section on lab detail and test detail: list notes newest-first; add / edit / delete |
+| **Visibility** | Easy to scan before the next appointment; optional “prep” filter |
+
+### Relationship to existing `notes`
+
+- Keep entity-level `notes` for **record metadata** (import quirks, lab/source comments).  
+- **FR-017 notes** are **user discussion / visit notes** about that lab or test with a clinician.  
+- If both remain, label them clearly in UI so they are not confused.
+
+### Data / UX (draft)
+
+| Field (illustrative) | Notes |
+|----------------------|--------|
+| `entity_type` | `lab_panel` \| `test` (extend later if needed) |
+| `entity_id` | FK to panel or test |
+| `noted_on` | Date of visit/discussion (default today) |
+| `kind` | optional: `prep` \| `visit` \| `follow_up` \| `other` |
+| `body` | Main note text |
+| `created_at` / `updated_at` | Audit |
+
+- Route: sections on `/labs/[id]` and `/tests/[id]`  
+- Optional: surface latest discussion note on list rows or dashboard “next visit prep”  
+- Optional later: include discussion notes in co-pilot chart context for evaluate/chat (privacy-sensitive—opt-in)
+
+### Out of scope (v1)
+
+- Full multi-provider visit / encounter model  
+- Audio recording or transcription  
+- AI auto-summary of visits (could be a follow-on skill)  
+- Notes on individual analytes only (panel/test level is enough for v1)  
+
+### Acceptance criteria (when built)
+
+1. User can add one or more dated notes on a **lab panel** and on a **clinical test**  
+2. Notes persist, list chronologically, and can be edited or deleted  
+3. Visit/discussion date is distinct from collection/performed date  
+4. UI makes clear these are **doctor discussion** notes vs entity metadata notes  
+5. Empty state encourages “what to ask” / “what the doctor said” use cases  
+
+### Related
+
+- Labs, tests; procedures (possible later target); FR-016 symptoms (separate journal); co-pilot context if notes are later included intentionally  
+
+---
+
 ## FR backlog index
 
 | ID | Title | Notes |
@@ -822,3 +887,4 @@ Always show **assistive / not medical advice** disclaimer.
 | FR-014 | Dashboard analyte trends | User-selected analyte sparklines/charts |
 | FR-015 | Analyte results table + expandable history | Latest + past; links to lab/document |
 | FR-016 | Symptoms log + AI chart cross-check | Log symptoms; AI vs labs/dx/meds |
+| FR-017 | Doctor-visit notes on labs and tests | Dated discussion notes per lab/test |

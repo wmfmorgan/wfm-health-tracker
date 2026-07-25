@@ -183,7 +183,10 @@ export function ImportNewForm({
         </p>
       ) : (
         <div className="space-y-1 text-xs text-zinc-500">
-          <p>Ollama runs locally. Extraction starts immediately after upload.</p>
+          <p>
+            Ollama runs locally. Import will load the model into memory, then extract lab
+            drafts for review.
+          </p>
           {ollamaOptions.length === 0 ? (
             <p className="text-amber-800">
               {ollamaListError ??

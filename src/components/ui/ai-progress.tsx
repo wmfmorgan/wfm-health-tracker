@@ -22,6 +22,8 @@ type Props = {
   intervalMs?: number;
   footer?: React.ReactNode;
   detail?: React.ReactNode;
+  /** Optional class overrides for the outer card (e.g. embedded layouts). */
+  className?: string;
 };
 
 function normalizeSteps(
@@ -45,6 +47,7 @@ export function AiProgress({
   intervalMs = 2600,
   footer,
   detail,
+  className = "",
 }: Props) {
   const steps = normalizeSteps(stepsIn);
   const maxIndex = Math.max(0, steps.length - 1);
@@ -70,7 +73,7 @@ export function AiProgress({
 
   return (
     <div
-      className="max-w-xl rounded-lg border border-zinc-200 bg-white p-6 shadow-sm"
+      className={`max-w-xl rounded-lg border border-zinc-200 bg-white p-6 shadow-sm ${className}`.trim()}
       role="status"
       aria-live="polite"
       aria-busy={active}

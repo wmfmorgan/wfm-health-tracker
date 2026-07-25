@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDisplayDate, normalizeIsoDate } from "@/lib/dates";
 
 /** React form `action` types expect void; keep structured action results for callers. */
 function asFormAction(fn: (...args: never[]) => unknown): (formData: FormData) => Promise<void> {
@@ -30,6 +31,27 @@ function reviewVariant(
   if (status === "rejected") return "danger";
   if (status === "pending") return "warning";
   return "muted";
+}
+
+function DraftMetaLine({
+  collectedOn,
+  facility,
+  resultCount,
+}: {
+  collectedOn: string | null;
+  facility: string | null;
+  resultCount: number;
+}) {
+  return (
+    <p className="mt-1 text-xs text-zinc-500">
+      <span className={collectedOn ? "font-medium text-zinc-700" : undefined}>
+        {formatDisplayDate(collectedOn)}
+      </span>
+      {facility ? ` · ${facility}` : ""}
+      {" · "}
+      {resultCount} result{resultCount === 1 ? "" : "s"}
+    </p>
+  );
 }
 
 type Props = {
@@ -50,12 +72,11 @@ export function DraftPanelCard({ draft, analytes, facilities }: Props) {
                 accepted
               </Badge>
             </div>
-            <p className="mt-1 text-xs text-zinc-500">
-              {draft.collectedOn ?? "No date"}
-              {draft.facility ? ` · ${draft.facility}` : ""}
-              {" · "}
-              {draft.results.length} result{draft.results.length === 1 ? "" : "s"}
-            </p>
+            <DraftMetaLine
+              collectedOn={draft.collectedOn}
+              facility={draft.facility}
+              resultCount={draft.results.length}
+            />
           </div>
           {draft.committedEntityId ? (
             <Link href={`/labs/${draft.committedEntityId}`}>
@@ -78,12 +99,11 @@ export function DraftPanelCard({ draft, analytes, facilities }: Props) {
             rejected
           </Badge>
         </div>
-        <p className="mt-1 text-xs text-zinc-500">
-          {draft.collectedOn ?? "No date"}
-          {draft.facility ? ` · ${draft.facility}` : ""}
-          {" · "}
-          {draft.results.length} result{draft.results.length === 1 ? "" : "s"}
-        </p>
+        <DraftMetaLine
+          collectedOn={draft.collectedOn}
+          facility={draft.facility}
+          resultCount={draft.results.length}
+        />
       </div>
     );
   }
@@ -98,14 +118,23 @@ export function DraftPanelCard({ draft, analytes, facilities }: Props) {
     notes: r.notes ?? "",
   }));
 
+  const dateInputValue = normalizeIsoDate(draft.collectedOn) ?? "";
+
   return (
     <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-base font-medium text-zinc-900">{draft.name}</h3>
-          <Badge variant="warning" className="capitalize">
-            pending review
-          </Badge>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-medium text-zinc-900">{draft.name}</h3>
+            <Badge variant="warning" className="capitalize">
+              pending review
+            </Badge>
+          </div>
+          <DraftMetaLine
+            collectedOn={draft.collectedOn}
+            facility={draft.facility}
+            resultCount={draft.results.length}
+          />
         </div>
         <div className="flex flex-wrap gap-2">
           <form action={asFormAction(acceptDraftPanelAction.bind(null, draft.id))}>
@@ -181,7 +210,7 @@ export function DraftPanelCard({ draft, analytes, facilities }: Props) {
               <Input
                 name="collectedOn"
                 type="date"
-                defaultValue={draft.collectedOn ?? ""}
+                defaultValue={dateInputValue}
               />
             </Label>
             <Label>

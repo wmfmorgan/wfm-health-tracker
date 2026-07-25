@@ -29,6 +29,7 @@ import {
   type LabResultInput,
 } from "@/lib/validation/lab";
 import { extractLabsFromText } from "@/server/ai/extract-labs";
+import { warmOllamaModel } from "@/server/ai/ollama";
 import { getAIProvider } from "@/server/ai/router";
 import { createLabPanel } from "@/server/services/labs";
 import { linkDocument, savePdfDocument, getDocumentFilePath } from "@/server/services/documents";
@@ -348,7 +349,11 @@ export function updateDraftPanel(
   tx();
 }
 
-export function acceptDraftPanel(draftPanelId: string): { labPanelId: string } {
+export function acceptDraftPanel(draftPanelId: string): {
+  labPanelId: string;
+  importJobId: string;
+  jobStatus: ImportJobStatus;
+} {
   bootstrapDb();
   const draft = getDb()
     .select()
@@ -409,7 +414,17 @@ export function acceptDraftPanel(draftPanelId: string): { labPanelId: string } {
     .run();
 
   recomputeJobCompletion(job.id);
-  return { labPanelId: live.id };
+  const updated = getDb()
+    .select({ status: importJobs.status })
+    .from(importJobs)
+    .where(eq(importJobs.id, job.id))
+    .get();
+
+  return {
+    labPanelId: live.id,
+    importJobId: job.id,
+    jobStatus: (updated?.status ?? job.status) as ImportJobStatus,
+  };
 }
 
 export function rejectDraftPanel(draftPanelId: string): void {
@@ -437,7 +452,10 @@ export function rejectDraftPanel(draftPanelId: string): void {
   recomputeJobCompletion(draft.importJobId);
 }
 
-export function acceptAllPending(jobId: string): void {
+export function acceptAllPending(jobId: string): {
+  importJobId: string;
+  jobStatus: ImportJobStatus;
+} {
   bootstrapDb();
   const job = getDb().select().from(importJobs).where(eq(importJobs.id, jobId)).get();
   if (!job) throw new Error(`Import job not found: ${jobId}`);
@@ -453,6 +471,17 @@ export function acceptAllPending(jobId: string): void {
   for (const panel of pending) {
     acceptDraftPanel(panel.id);
   }
+
+  const updated = getDb()
+    .select({ status: importJobs.status })
+    .from(importJobs)
+    .where(eq(importJobs.id, jobId))
+    .get();
+
+  return {
+    importJobId: jobId,
+    jobStatus: (updated?.status ?? job.status) as ImportJobStatus,
+  };
 }
 
 export function discardImportJob(jobId: string): void {
@@ -589,6 +618,7 @@ export async function runExtractForJob(
     extractPdfText?: (buf: Buffer) => Promise<string>;
     extractLabs?: typeof extractLabsFromText;
     getProvider?: typeof getAIProvider;
+    warmModel?: typeof warmOllamaModel;
   },
 ): Promise<void> {
   bootstrapDb();
@@ -608,6 +638,18 @@ export async function runExtractForJob(
     const text = await extractText(buffer);
 
     const settings = getAiSettings();
+
+    // Load Ollama model into memory before the extract call (progress step).
+    if (job.provider === "ollama") {
+      const warm = deps?.warmModel ?? warmOllamaModel;
+      const warmResult = await warm(settings.ollamaBaseUrl, job.model, {
+        keepAlive: "30m",
+      });
+      if (!warmResult.ok) {
+        throw new Error(warmResult.error);
+      }
+    }
+
     const getProvider = deps?.getProvider ?? getAIProvider;
     const provider = getProvider(
       job.provider as "grok" | "ollama",

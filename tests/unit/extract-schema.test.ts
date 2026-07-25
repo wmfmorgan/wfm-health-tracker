@@ -43,6 +43,28 @@ describe("extractLabsFromText", () => {
     expect(provider.calls).toBe(1);
   });
 
+  it("normalizes collectedOn from US date and snake_case keys", async () => {
+    const provider = new FakeProvider([
+      {
+        panels: [
+          {
+            name: "CMP",
+            collected_on: "03/15/2026",
+            results: [{ analyteName: "Glucose", value: "112", flag: "H" }],
+          },
+        ],
+      },
+    ]);
+
+    const labs = await extractLabsFromText({
+      text: "Collected 03/15/2026 Glucose 112",
+      provider,
+      model: "fake",
+    });
+
+    expect(labs.panels[0].collectedOn).toBe("2026-03-15");
+  });
+
   it('normalizes flag "High" to "H" before schema parse', async () => {
     const provider = new FakeProvider([
       {
