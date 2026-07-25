@@ -234,6 +234,9 @@ Backlog FRs (see `docs/superpowers/specs/FUTURE-REQUIREMENTS.md`):
 - **FR-008** — persona view version rollback  
 - **FR-009** — chat → Evaluate affordance  
 - **FR-010** — auto-invoke skills without slash  
+- **FR-011** — AI-maintained health profile (user-editable; used in chat/evaluate)  
+- **FR-012** — drug interaction skill + flags on meds/supplements  
+- **FR-013** — vitals & body metrics time series (BP, weight, BMI, … catalog TBD)  
 
 Also later / non-goals for now:
 
