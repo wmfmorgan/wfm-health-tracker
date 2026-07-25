@@ -449,6 +449,190 @@ Skills only run via `/skill-name`. Users may type natural language (“check my 
 
 ---
 
+## FR-011: AI-maintained health profile (user-editable)
+
+**Status:** Backlog  
+**Priority:** High (durable “who I am” context for all co-pilot surfaces)  
+**Depends on:** Profile record (done); context builder; chat + evaluate (done); accepted persona views / My plan optional as sources
+
+### Problem
+
+Structured chart rows (meds, labs, diagnoses) are facts. There is no **living narrative profile** that summarizes the person—chronic conditions, goals, preferences, what “normal” looks like for them—that AI helps keep current and that every chat/evaluate run can trust. Without it, each co-pilot call re-discovers context or invents a thin picture from raw tables only.
+
+### Desired capability
+
+A **Health profile** document (markdown and/or structured sections) that:
+
+| Property | Description |
+|----------|-------------|
+| **AI-generated** | Can be created/refreshed from live chart + accepted views + optional user notes |
+| **User-editable** | Full edit in UI; user text is source of truth after save |
+| **AI-maintained** | Optional “Refresh with AI” proposes a **draft** update; user must accept/merge (same review spirit as Evaluate) |
+| **Referenced always** | Context builder includes health profile in **chat and evaluate** (and relevant skills) by default |
+
+### UX (draft)
+
+- Route under Profile or Brief: **Health profile**  
+- Display current body; **Edit** / **Save**  
+- **Generate** (first time) / **Suggest update** (later) → show draft diff → **Accept** / **Discard**  
+- Provenance: last human edit vs last AI-accepted refresh; provider/model if AI  
+
+### Data (draft)
+
+- Single-row or versioned table e.g. `health_profile`: `body_md`, `sections_json` optional, `updated_at`, `updated_by` (`user` | `ai_accepted`), optional `ai_provider` / `ai_model`  
+- Prefer version history if refresh is common (align with persona view pattern)  
+
+### Context rules
+
+- Always inject accepted health profile into chat + evaluate context (size-capped).  
+- Draft AI refreshes **never** enter context until user accepts.  
+- Do not silently overwrite user edits.
+
+### Out of scope
+
+- Multi-patient profiles  
+- Auto-overwrite without review  
+- Replacing clinical tables (meds/labs remain source for structured facts)  
+- FR-007 shared brief snapshot (related but separate “at a glance” artifact)  
+
+### Acceptance criteria (when built)
+
+1. User can view and freely edit a health profile and save it  
+2. User can ask AI to generate or propose an update; proposal requires accept before it becomes current  
+3. Chat and evaluate include the current health profile in assembled context  
+4. Unaccepted AI drafts never appear in co-pilot context  
+5. Assistive / not medical advice labeling remains on AI actions  
+
+### Related
+
+- Context builder; persona views; My plan; FR-007 snapshot (do not conflate)  
+
+---
+
+## FR-012: Drug interaction skill + med/supplement interaction UI
+
+**Status:** Backlog  
+**Priority:** High (safety-adjacent decision support)  
+**Depends on:** Medications + supplements CRUD (done); skill registry (done); optional `/med-check` skill (exists—this FR goes deeper and persists flags)
+
+### Problem
+
+`/med-check` can discuss interactions in chat, but there is no **durable, visible interaction signal** on the medications and supplements tables. Example: doxycycline with zinc or magnesium—absorption interaction—should be **flagged on the rows** with a short reason, not only in a one-off chat reply.
+
+### Desired capability
+
+1. **Skill:** dedicated **drug interaction** skill (slash), e.g. `/drug-interactions` (or deepen `/med-check`), that reviews active meds + supplements (+ allergies) and returns structured interaction findings.  
+2. **UI section on meds & supplements:** per-entity (or pair) interaction flags with reason text, severity/hint if available, and when last checked.  
+3. **Example expectation:** antibiotic such as **doxycycline** + **zinc** / **magnesium** supplements flagged as interactive with a plain-language reason (e.g. divalent cations reduce absorption / separate dosing).
+
+### UX (draft)
+
+- Medications list/detail: **Interactions** section (badges or list: “May interact with Magnesium — take hours apart”)  
+- Supplements list/detail: same  
+- **Run interaction check** (skill) from Co-pilot and/or from meds page  
+- Results: write to structured store + show in UI; user can dismiss/clear outdated flags after med list changes  
+- Always disclaimer: not a complete DDI database; educational / assistive only  
+
+### Data (draft)
+
+- Table e.g. `drug_interactions` or `entity_interaction_flags`:  
+  - `id`, `left_entity_type` / `left_entity_id`, `right_entity_type` / `right_entity_id` (med/supplement)  
+  - `severity` optional (`info` | `caution` | `serious` — free-text OK if AI-sourced)  
+  - `reason`, `source` (`ai` | `user`), `checked_at`, `provider`, `model`  
+- Prefer relational pairs for two-way display on both entities  
+
+### Skill behavior (draft)
+
+- Input: active meds + supplements (+ allergies); optional focus  
+- Output: structured list of pairs + reasons; validate before save  
+- Prefer local model for privacy; Grok opt-in  
+- Do **not** invent agents not on the chart  
+
+### Out of scope
+
+- Licensed commercial DDI database integration (optional later data source)  
+- Auto-blocking prescriptions  
+- Replacing clinician/pharmacist advice  
+
+### Acceptance criteria (when built)
+
+1. User can run a drug-interaction skill against current meds/supplements  
+2. Findings appear on medication and supplement UIs with a reason  
+3. Example class of issue (e.g. doxycycline ↔ zinc/magnesium) can be represented when those agents are on the chart  
+4. Flags refresh or clear when entities change (or user re-runs check)  
+5. Clear assistive / not medical advice labeling  
+
+### Related
+
+- Existing `/med-check` skill; medications & supplements records  
+
+---
+
+## FR-013: Vitals & body metrics time series
+
+**Status:** Backlog  
+**Priority:** Medium–high  
+**Depends on:** Profile height/weight as single current values (done—keep or migrate carefully)
+
+### Problem
+
+Profile today holds **point-in-time** height/weight (and similar static fields). There is no first-class place to record **longitudinal health metrics**—blood pressure, weight over time, BMI, heart rate, etc.—or a dedicated UI section for them. **Full metric catalog is TBD** when this FR is designed/implemented.
+
+### Desired capability
+
+A new **vitals / metrics** domain:
+
+| Area | Description |
+|------|-------------|
+| **Table(s)** | Time-stamped measurements (and optional metric definitions) |
+| **UI section** | List + add/edit/delete; optional simple trends later |
+| **Metrics (illustrative, not final)** | BP (systolic/diastolic), height, weight, BMI (computed or stored), others **TBD** |
+| **Context** | Recent vitals available to chat/evaluate when scoped |
+
+### Design open points (resolve at implement)
+
+- Final list of metric types and units  
+- Single wide table vs `metric_type` + value JSON  
+- Whether profile height/weight remain “current” denormalized from latest vitals  
+- Targets/goals and out-of-range flags  
+- Device import (manual entry first)
+
+### UX (draft)
+
+- Sidebar or Profile subsection: **Vitals** / **Metrics**  
+- Add reading: type, value(s), unit, measured-at, notes  
+- Table sorted by date; filter by type  
+- Optional: show latest BP/weight on dashboard  
+
+### Data (draft — TBD)
+
+Example shape (subject to change):
+
+- `vital_readings`: `id`, `metric_type`, `value_primary`, `value_secondary` (e.g. diastolic), `unit`, `measured_at`, `notes`, timestamps  
+- Or normalized `metric_definitions` + `metric_observations`  
+
+BMI may be computed from height + weight rather than always stored.
+
+### Out of scope (first cut)
+
+- Continuous wearables sync  
+- Clinical-grade device certification  
+- Full symptom journals (separate non-goal unless later FR)  
+
+### Acceptance criteria (when built)
+
+1. User can CRUD timestamped readings for the agreed initial metric set  
+2. Dedicated UI section exists (not only buried in free-text notes)  
+3. Full metric list is decided and documented during the FR design pass (TBD frozen before code)  
+4. Recent readings can be included in co-pilot context when selected  
+5. Existing profile height/weight behavior is defined (keep, migrate, or dual-write)  
+
+### Related
+
+- Profile height/weight fields; dashboard; context builder  
+
+---
+
 ## FR backlog index
 
 | ID | Title | Notes |
@@ -463,3 +647,6 @@ Skills only run via `/skill-name`. Users may type natural language (“check my 
 | FR-008 | Persona view version rollback | Phase 3 brief follow-on |
 | FR-009 | Chat → Evaluate affordance | Phase 3 co-pilot follow-on |
 | FR-010 | Auto-invoke skills (no slash) | Phase 3 skills optional later |
+| FR-011 | AI-maintained health profile (user-editable) | Co-pilot context; review-gated AI refresh |
+| FR-012 | Drug interaction skill + med/supp UI flags | Safety-adjacent; e.g. doxy ↔ Zn/Mg |
+| FR-013 | Vitals & body metrics time series | BP, weight, BMI, etc. — catalog TBD |
