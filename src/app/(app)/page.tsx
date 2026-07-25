@@ -2,6 +2,9 @@ import Link from "next/link";
 import { ageFromDob } from "@/lib/dates";
 import { getDashboardSummary } from "@/server/services/dashboard";
 import { globalSearch } from "@/server/services/search";
+import { listAnalyteSummaries } from "@/server/services/analyte-results";
+import { getPinnedAnalytes } from "@/server/services/settings";
+import { LabTrendsSection } from "@/components/dashboard/lab-trends-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -27,6 +30,8 @@ export default async function DashboardPage({
   const hits = q ? globalSearch(q) : [];
   const age = ageFromDob(summary.profile.dateOfBirth);
   const displayName = summary.profile.displayName?.trim() || "Your chart";
+  const analyteSummaries = listAnalyteSummaries();
+  const pinnedKeys = getPinnedAnalytes();
 
   return (
     <div className="text-zinc-900">
@@ -125,6 +130,11 @@ export default async function DashboardPage({
           value={summary.allergyCount}
         />
       </div>
+
+      <LabTrendsSection
+        summaries={analyteSummaries}
+        pinnedKeys={pinnedKeys}
+      />
 
       <section className="mt-8 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-2">

@@ -635,7 +635,7 @@ BMI may be computed from height + weight rather than always stored.
 
 ## FR-014: Dashboard analyte trends
 
-**Status:** Backlog  
+**Status:** Done (2026-07-25) — up to 5 pinned sparklines + 1 ad-hoc trend; series use confirmed aliases  
 **Priority:** Medium–high (at-a-glance chart monitoring)  
 **Depends on:** Lab panels + results (done); analytes catalog (done); dashboard page (done)
 
@@ -688,7 +688,7 @@ On the **dashboard**, show **trend charts (or sparklines)** for **user-selected 
 
 ## FR-015: Analyte results table (latest + expandable history)
 
-**Status:** Backlog  
+**Status:** Done (2026-07-25) — `/analytes` results table + expand history + panel/PDF links; confirm-gated aliases  
 **Priority:** Medium–high  
 **Depends on:** Lab panels + results (done); analytes catalog (done); document links on panels (done where present)
 
@@ -884,7 +884,7 @@ Attach **clinical discussion notes** to labs and tests:
 | FR-011 | AI-maintained health profile (user-editable) | Co-pilot context; review-gated AI refresh |
 | FR-012 | Drug interaction skill + med/supp UI flags | Safety-adjacent; e.g. doxy ↔ Zn/Mg |
 | FR-013 | Vitals & body metrics time series | BP, weight, BMI, etc. — catalog TBD |
-| FR-014 | Dashboard analyte trends | User-selected analyte sparklines/charts |
-| FR-015 | Analyte results table + expandable history | Latest + past; links to lab/document |
+| FR-014 | Dashboard analyte trends | **Done** — 5 pins + ad-hoc; SVG sparklines |
+| FR-015 | Analyte results table + expandable history | **Done** — table + aliases (confirm merge) |
 | FR-016 | Symptoms log + AI chart cross-check | Log symptoms; AI vs labs/dx/meds |
 | FR-017 | Doctor-visit notes on labs and tests | Dated discussion notes per lab/test |

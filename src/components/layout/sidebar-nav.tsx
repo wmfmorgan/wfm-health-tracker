@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/diagnoses", label: "Diagnoses" },
   { href: "/medications", label: "Medications" },
   { href: "/supplements", label: "Supplements" },
+  { href: "/analytes", label: "Analytes" },
   { href: "/labs", label: "Labs" },
   { href: "/tests", label: "Tests" },
   { href: "/procedures", label: "Procedures" },
@@ -28,7 +29,6 @@ const NAV_ITEMS: NavItem[] = [
     label: "Reference",
     children: [
       { href: "/providers", label: "Providers" },
-      { href: "/analytes", label: "Analytes" },
       { href: "/import", label: "Import" },
       { href: "/documents", label: "Documents" },
     ],

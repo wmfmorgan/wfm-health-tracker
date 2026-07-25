@@ -197,6 +197,32 @@ export const analytes = sqliteTable("analytes", {
   updatedAt: text("updated_at").notNull(),
 });
 
+/** Alternate spellings that resolve to a catalog analyte (user-confirmed only). */
+export const analyteAliases = sqliteTable("analyte_aliases", {
+  id: text("id").primaryKey(),
+  analyteId: text("analyte_id")
+    .notNull()
+    .references(() => analytes.id, { onDelete: "cascade" }),
+  alias: text("alias").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+/**
+ * User-rejected potential alias suggestions (spelling → target).
+ * Prevents the same flag from resurfacing after reject.
+ */
+export const analyteAliasRejections = sqliteTable("analyte_alias_rejections", {
+  id: text("id").primaryKey(),
+  /** Lowercased trimmed spelling from lab results */
+  spellingKey: text("spelling_key").notNull(),
+  /** Display form of the spelling when rejected (optional audit) */
+  spelling: text("spelling").notNull(),
+  targetAnalyteId: text("target_analyte_id")
+    .notNull()
+    .references(() => analytes.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").notNull(),
+});
+
 export const importJobs = sqliteTable("import_jobs", {
   id: text("id").primaryKey(),
   documentId: text("document_id")

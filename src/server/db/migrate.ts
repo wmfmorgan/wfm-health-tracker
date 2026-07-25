@@ -178,6 +178,19 @@ export function migrate() {
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS analyte_aliases (
+    id TEXT PRIMARY KEY,
+    analyte_id TEXT NOT NULL REFERENCES analytes(id) ON DELETE CASCADE,
+    alias TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS analyte_alias_rejections (
+    id TEXT PRIMARY KEY,
+    spelling_key TEXT NOT NULL,
+    spelling TEXT NOT NULL,
+    target_analyte_id TEXT NOT NULL REFERENCES analytes(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL
+  )`);
   db.run(sql`CREATE TABLE IF NOT EXISTS import_jobs (
     id TEXT PRIMARY KEY,
     document_id TEXT NOT NULL REFERENCES documents(id),

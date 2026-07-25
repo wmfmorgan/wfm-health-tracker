@@ -7,7 +7,6 @@ import {
   aiSettingsSchema,
   type AiSettings,
 } from "@/lib/validation/ai-settings";
-
 function getRaw(key: string): string | undefined {
   bootstrapDb();
   return getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()?.value;
@@ -43,4 +42,37 @@ export function saveAiSettings(input: AiSettings) {
 
 export function hasXaiApiKey(): boolean {
   return Boolean(process.env.XAI_API_KEY?.trim());
+}
+
+const PINNED_ANALYTES_KEY = "dashboard.pinned_analytes";
+
+/** Canonical series keys pinned to the dashboard (persist across sessions). */
+export function getPinnedAnalytes(): string[] {
+  const raw = getRaw(PINNED_ANALYTES_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return [
+      ...new Set(
+        parsed
+          .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+          .map((x) => x.trim()),
+      ),
+    ];
+  } catch {
+    return [];
+  }
+}
+
+export function savePinnedAnalytes(keys: string[]): string[] {
+  const cleaned = [
+    ...new Set(
+      keys
+        .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+        .map((x) => x.trim()),
+    ),
+  ];
+  setRaw(PINNED_ANALYTES_KEY, JSON.stringify(cleaned));
+  return cleaned;
 }
