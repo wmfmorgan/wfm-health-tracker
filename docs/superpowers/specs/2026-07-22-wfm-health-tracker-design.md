@@ -98,7 +98,7 @@ Next.js app
 
 ~~**Phase 4 – Hardening**~~ was retired as a milestone. Former items are individual backlog FRs (encrypted backup, lock UX, cloud audit) in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md).
 
-**Future requirements:** detailed backlog in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md) (FR-001…FR-015). Phase 3 first ship + slash skills are complete. Notable product backlog: AI health profile (**FR-011**), drug interactions (**FR-012**), vitals (**FR-013**), analyte trends/table (**FR-014**, **FR-015**), plus co-pilot polish FR-001 / FR-005–FR-010.
+**Future requirements:** detailed backlog in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md) (FR-001…FR-016). Phase 3 first ship + slash skills are complete. Notable product backlog: AI health profile (**FR-011**), drug interactions (**FR-012**), vitals (**FR-013**), analyte trends/table (**FR-014**, **FR-015**), symptoms + AI cross-check (**FR-016**), plus co-pilot polish FR-001 / FR-005–FR-010.
 
 ---
 

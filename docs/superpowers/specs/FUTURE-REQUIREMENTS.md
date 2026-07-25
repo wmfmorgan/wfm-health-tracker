@@ -741,6 +741,67 @@ An **analyte-centric results table**:
 
 ---
 
+## FR-016: Symptoms log + AI chart cross-check
+
+**Status:** Backlog  
+**Priority:** Medium–high (chronic-care tracking; previously an explicit non-goal of early phases)  
+**Depends on:** Diagnoses, labs, meds/supplements (done); dual AI providers + skills (done); optional FR-011 health profile / FR-013 vitals as extra context
+
+### Problem
+
+There is no place to **log symptoms over time** (onset, severity, notes). Free-text notes on other entities are a poor fit. Separately, when symptoms change, it is hard to manually correlate them with **labs, diagnoses, meds, and other chart data**—AI can help surface *possible* relationships for the user to review, without diagnosing.
+
+### Desired capability
+
+1. **Symptoms table + UI** — first-class CRUD for symptom entries.  
+2. **AI cross-check** — skill and/or action that reviews logged symptoms against live chart context (labs, diagnoses, meds/supplements, allergies, optional vitals/profile) and returns structured, reviewable findings.
+
+### Symptom log (data + UX draft)
+
+| Field (illustrative) | Notes |
+|----------------------|--------|
+| `name` / free-text label | e.g. “abdominal pain”, “fatigue” |
+| `occurred_at` / onset | When it started or was noted |
+| `severity` | Optional scale (e.g. 1–10) or enum |
+| `status` | active / resolved / intermittent (TBD) |
+| `notes` | Free text |
+| timestamps | created/updated |
+
+**UI:** Sidebar or Records group — **Symptoms** list + new/edit/detail; filters by date/status; optional dashboard “recent symptoms.”
+
+### AI cross-check (draft)
+
+| Area | Description |
+|------|-------------|
+| **Trigger** | Slash skill e.g. `/symptom-check` and/or button on Symptoms page: “Check against chart” |
+| **Context** | Selected or recent symptoms + diagnoses + relevant labs + active meds/supps (+ allergies); size-capped |
+| **Output** | Structured findings: possible correlations, questions to ask a clinician, gaps—not a diagnosis |
+| **Persistence** | Optional: save last check summary on a symptom or as a chat-only reply (prefer chat/skill first; durable notes only if user accepts) |
+
+Always show **assistive / not medical advice** disclaimer.
+
+### Out of scope
+
+- Emergency triage / “call 911” automation beyond static disclaimer  
+- Auto-creating diagnoses or lab orders from symptoms  
+- Wearable continuous symptom streams  
+- Replacing clinician evaluation  
+
+### Acceptance criteria (when built)
+
+1. User can create, edit, list, and delete symptom log entries in a dedicated UI  
+2. Symptom data is stored in SQLite under `data/` (backup unit)  
+3. User can run an AI check of symptoms against chart data (labs, diagnoses, etc.)  
+4. AI output is clearly educational / assistive and does not write diagnoses without user action  
+5. Symptoms can be included in co-pilot context when scoped (chat/evaluate)  
+
+### Related
+
+- Early design non-goal “symptom journals” — this FR promotes a focused v1  
+- FR-011 health profile; FR-013 vitals; `/lab-interpret`, evaluate personas  
+
+---
+
 ## FR backlog index
 
 | ID | Title | Notes |
@@ -760,3 +821,4 @@ An **analyte-centric results table**:
 | FR-013 | Vitals & body metrics time series | BP, weight, BMI, etc. — catalog TBD |
 | FR-014 | Dashboard analyte trends | User-selected analyte sparklines/charts |
 | FR-015 | Analyte results table + expandable history | Latest + past; links to lab/document |
+| FR-016 | Symptoms log + AI chart cross-check | Log symptoms; AI vs labs/dx/meds |

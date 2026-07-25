@@ -239,8 +239,9 @@ Backlog FRs (see `docs/superpowers/specs/FUTURE-REQUIREMENTS.md`):
 - **FR-013** — vitals & body metrics time series (BP, weight, BMI, … catalog TBD)  
 - **FR-014** — dashboard trends for selected analytes  
 - **FR-015** — analyte results table (latest + expandable history, lab/document links)  
+- **FR-016** — symptoms log + AI cross-check vs labs/diagnoses/chart  
 
 Also later / non-goals for now:
 
 - OCR for scanned PDFs  
-- Symptom journals, multi-user, mobile apps
+- Multi-user, mobile apps
