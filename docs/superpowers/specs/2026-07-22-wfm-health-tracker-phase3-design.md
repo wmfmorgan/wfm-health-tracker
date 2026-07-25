@@ -30,7 +30,7 @@ This is **decision support for the user**, not medical advice and not a provider
 - Multi-agent autonomous care teams that write memory without review.
 - Silent merge of conflicting persona recommendations.
 - OCR / PDF vision (still Phase 2 text path for import).
-- Encrypted backup (Phase 4).
+- Encrypted backup (**FR-003** backlog).
 - Symptom journals, multi-user, mobile-native apps.
 - Auto-mutation of clinical records (meds/labs) by AI.
 

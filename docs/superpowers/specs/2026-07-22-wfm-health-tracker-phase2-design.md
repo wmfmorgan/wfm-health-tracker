@@ -23,7 +23,7 @@ Phase 2 does **not** add chat, med cross-check, OCR, or non-lab entity extractio
 - OCR / scanned-image PDFs (text layer required; clear failure message).
 - Extracting diagnoses, medications, supplements, tests, or procedures.
 - AI chat, lab interpretation co-pilot, or FR-001 analyte lay explanations (Phase 3).
-- Encrypted backup hardening (Phase 4).
+- Encrypted backup hardening (**FR-003** backlog).
 - Multi-user or multi-tenant import queues.
 
 ### 1.3 Success criteria
@@ -441,7 +441,8 @@ XAI_API_KEY=
 - OCR / vision PDF paths  
 - Non-lab entity extraction  
 - Phase 3 co-pilot / FR-001  
-- Phase 4 encrypted backups  
+- Encrypted backups (**FR-003**)  
+
 - Background worker process / queue external to Next.js  
 
 ---

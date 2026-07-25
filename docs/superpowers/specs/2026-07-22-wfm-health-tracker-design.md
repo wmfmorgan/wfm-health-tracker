@@ -94,10 +94,11 @@ Next.js app
 |-------|--------|
 | **1 – Records hub** | Profile, allergies, clinical CRUD, document upload/storage/linking, optional passcode, dashboard, search |
 | **2 – AI PDF import** | Extract → review/edit/accept drafts → commit records already linked to source PDF |
-| **3 – AI co-pilot** | Chat, med/supplement cross-check, lab interpretation; provider router (xAI Grok + Ollama); **FR-001** analyte lay explanations (see `FUTURE-REQUIREMENTS.md`) |
-| **4 – Hardening** | Encrypted backup export, stronger lock UX |
+| **3 – AI co-pilot** | Chat, med/supplement cross-check, lab interpretation; provider router (xAI Grok + Ollama); skills |
 
-**Future requirements:** detailed backlog in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md) (e.g. FR-001 analyte lay explanations; **FR-002** cloud-data audit log).
+~~**Phase 4 – Hardening**~~ was retired as a milestone. Former items are individual backlog FRs (encrypted backup, lock UX, cloud audit) in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md).
+
+**Future requirements:** detailed backlog in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md) (FR-001…FR-004 and beyond).
 
 ---
 
@@ -292,7 +293,7 @@ data/
 ### 6.5 Backup (v1)
 
 - Document that backing up = copying `data/`.  
-- Phase 4: optional zip + password-encrypted export.
+- Later: optional zip + password-encrypted export (**FR-003**).
 
 ### 6.6 Auth gate
 

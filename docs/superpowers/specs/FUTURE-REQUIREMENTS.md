@@ -78,7 +78,7 @@ Alternatively: separate `analyte_explanations` table keyed by `analyte_id` + pro
 
 ## FR-002: Cloud-data audit log
 
-**Status:** Backlog (was briefly listed under Phase 4 Hardening; pulled out so Phase 4 stays backup + lock focus)  
+**Status:** Backlog (formerly under retired Phase 4 Hardening)  
 **Priority:** Medium (privacy visibility when using Grok / any cloud AI)  
 **Depends on:** Dual AI provider router (done); import, evaluate, chat call sites (done)
 
@@ -122,8 +122,8 @@ Stay inside `data/` so backup of the folder includes the audit log.
 
 ### Out of scope for this FR
 
-- Encrypted backup export (Phase 4)  
-- Stronger app lock UX (Phase 4)  
+- Encrypted backup export (**FR-003**)  
+- Stronger app lock UX (**FR-004**)  
 - Storing full request/response bodies by default  
 - Multi-device sync or remote audit dashboards  
 
@@ -137,14 +137,122 @@ Stay inside `data/` so backup of the folder includes the audit log.
 
 ### Related
 
-- Phase map: Phase 4 no longer includes this (see `2026-07-22-wfm-health-tracker-design.md`)  
+- Phase map: Phase 4 Hardening retired; this is backlog only (`2026-07-22-wfm-health-tracker-design.md`)  
 - Phase 2/3 privacy patterns: dual provider, Grok disclosure, former per-request confirm  
+
+---
+
+## FR-003: Encrypted backup export
+
+**Status:** Backlog (formerly Phase 4 Hardening)  
+**Priority:** Medium–high (PHI on disk; portable offline backup)  
+**Depends on:** Stable `data/` layout (SQLite + uploads) — done
+
+### Problem
+
+v1 backup guidance is “copy the `data/` folder.” That works but is easy to forget, offers no password protection at rest for a portable archive, and is awkward to move between machines without leaking plaintext PHI on intermediate media (USB, cloud drive folder, etc.).
+
+### Desired capability
+
+In-app (or CLI) **export of a single encrypted archive** containing everything needed to restore the chart:
+
+| Content | Description |
+|---------|-------------|
+| **SQLite DB** | `health.sqlite` (or current DB path) |
+| **Uploads** | PDF binaries under the uploads root |
+| **Optional** | Same-folder artifacts that are part of the backup unit (e.g. custom skills under `data/` if present) |
+
+Protect with a **user-chosen password** (or passphrase). Restore path: import archive + password → rebuild usable `data/`.
+
+### UX (draft)
+
+- **Settings → Backup:** “Export encrypted backup” / “Restore from backup”  
+- Password + confirm; show warnings about forgetting the password (no recovery)  
+- Progress for large upload trees  
+- Keep README note that raw `data/` copy still works for power users  
+
+### Implementation notes (draft)
+
+- Zip (or tar) + encryption (e.g. AES via a well-supported library; prefer established formats over home-rolled crypto)  
+- Never write the password to disk or logs  
+- Export file default name includes date; user chooses destination  
+- Restore should refuse to clobber without explicit confirm  
+
+### Out of scope for this FR
+
+- Continuous sync / multi-device live backup  
+- Cloud-hosted backup product  
+- Cloud-data audit (**FR-002**)  
+- Lock/passcode UX polish (**FR-004**)  
+
+### Acceptance criteria (when built)
+
+1. User can export an encrypted archive of the full backup unit from the app  
+2. Archive cannot be read without the password (smoke-checked)  
+3. User can restore into a clean or confirmed-overwrite data dir and open the app with prior records/docs  
+4. Password is not stored; failed restore with wrong password is a clear error  
+5. Docs/README describe export + still mention raw `data/` copy as an option  
+
+### Related
+
+- Design §6.5 Backup v1; retired Phase 4 hardening  
+
+---
+
+## FR-004: Stronger app lock UX
+
+**Status:** Backlog (formerly Phase 4 Hardening)  
+**Priority:** Medium (optional passcode exists; polish and hardness)  
+**Depends on:** Optional `APP_PASSWORD` / session lock (Phase 1) — done
+
+### Problem
+
+Passcode lock exists, but UX and hardness may be thin for a PHI app left open on a shared machine: weak session lifetime clarity, easy to leave unlocked, limited feedback when locked, and no richer lock behaviors (timeout, re-lock, lock now).
+
+### Desired capability
+
+Make the **optional app lock feel intentional and harder to bypass accidentally**:
+
+| Area | Ideas (pick at design time) |
+|------|------------------------------|
+| **Lock now** | Explicit control in shell/settings to lock immediately |
+| **Idle timeout** | Optional auto-lock after N minutes of inactivity |
+| **Session clarity** | Clear locked vs unlocked state; login copy that this protects the local chart |
+| **Route coverage** | Confirm UI + file/PDF routes remain gated when locked |
+| **Recovery** | Document that forgotten passcode = config/`APP_PASSWORD` reset (no cloud recovery) |
+
+### UX (draft)
+
+- Settings: enable/change/disable passcode; optional idle timeout  
+- Header or menu: “Lock now” when enabled  
+- Locked screen: simple passcode entry; no chart chrome visible behind it  
+
+### Out of scope for this FR
+
+- Multi-user accounts / roles  
+- OS keychain SSO as a requirement (optional later)  
+- Encrypted backup (**FR-003**)  
+- Full-disk encryption (OS-level; document only)  
+
+### Acceptance criteria (when built)
+
+1. User can lock the app immediately when passcode is enabled  
+2. Optional idle auto-lock works when configured  
+3. While locked, chart UI and document file routes require unlock  
+4. Lock/unlock states are obvious in the UI  
+5. README or settings text explains passcode reset / no remote recovery  
+
+### Related
+
+- Phase 1 optional passcode; retired Phase 4 hardening  
 
 ---
 
 ## FR backlog index
 
-| ID | Title | Phase hint |
-|----|--------|------------|
+| ID | Title | Notes |
+|----|--------|--------|
 | FR-001 | Lab analyte lay explanations (AI) | Lab literacy / co-pilot polish |
-| FR-002 | Cloud-data audit log | Privacy backlog (not Phase 4) |
+| FR-002 | Cloud-data audit log | Privacy; was Phase 4 |
+| FR-003 | Encrypted backup export | Was Phase 4 |
+| FR-004 | Stronger app lock UX | Was Phase 4 |
