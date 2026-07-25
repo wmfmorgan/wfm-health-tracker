@@ -224,10 +224,16 @@ Keep backups offline or encrypted if they leave this machine.
 
 Backlog FRs (see `docs/superpowers/specs/FUTURE-REQUIREMENTS.md`):
 
-- **FR-001** — lab analyte lay explanations  
+- **FR-001** — lab analyte lay explanations (cached UI; chat skill already shipped)  
 - **FR-002** — cloud-data audit log  
 - **FR-003** — encrypted backup export  
 - **FR-004** — stronger app lock UX  
+- **FR-005** — apply skill output to My plan  
+- **FR-006** — persona view section regenerate  
+- **FR-007** — shared chart brief snapshot  
+- **FR-008** — persona view version rollback  
+- **FR-009** — chat → Evaluate affordance  
+- **FR-010** — auto-invoke skills without slash  
 
 Also later / non-goals for now:
 

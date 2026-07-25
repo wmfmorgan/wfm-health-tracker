@@ -98,7 +98,7 @@ Next.js app
 
 ~~**Phase 4 – Hardening**~~ was retired as a milestone. Former items are individual backlog FRs (encrypted backup, lock UX, cloud audit) in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md).
 
-**Future requirements:** detailed backlog in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md) (FR-001…FR-004 and beyond).
+**Future requirements:** detailed backlog in [`FUTURE-REQUIREMENTS.md`](./FUTURE-REQUIREMENTS.md) (FR-001…FR-010). Phase 3 first ship + slash skills are complete; remaining co-pilot polish is FR-001 (UI cache) and FR-005–FR-010.
 
 ---
 

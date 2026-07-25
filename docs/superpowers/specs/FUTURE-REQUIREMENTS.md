@@ -6,9 +6,11 @@ Ideas locked for later phases. Not in current implementation scope.
 
 ## FR-001: Lab analyte lay explanations (AI-generated)
 
-**Status:** Planned (AI phase — after records hub; natural fit for Phase 3 co-pilot or a dedicated “lab literacy” slice)  
+**Status:** Partial — Phase 3 shipped `/analyte-explain` as a **chat-only** skill; this FR is the remaining **cached, in-record UI** (Analytes + lab rows), not a new skill  
 **Priority:** Medium–high (personal education / UC + aging chart)  
-**Depends on:** Analyte master list (done); AI provider router (Grok + local)  
+**Depends on:** Analyte master list (done); AI provider router (Grok + local); slash skill body can be reused  
+
+**Already shipped (do not re-build as a greenfield skill):** Chat slash skill `analyte-explain` that produces lay definition + health impact in-thread.
 
 ### Problem
 
@@ -248,11 +250,216 @@ Make the **optional app lock feel intentional and harder to bypass accidentally*
 
 ---
 
+## FR-005: Apply synthesize / skill output to My plan
+
+**Status:** Backlog (Phase 3 skills follow-on)  
+**Priority:** Medium  
+**Depends on:** My plan entity + edit UI (done); `/synthesize-plan` chat skill (done)
+
+### Problem
+
+`/synthesize-plan` (and similar chat outputs) can **suggest** My plan text, but the user must copy/paste into My plan. Design called out an explicit **Apply to My plan** accept path so synthesis becomes reviewed memory without free-text paste errors.
+
+### Desired capability
+
+- On assistant messages produced by synthesize-plan (and optionally other skills marked for My plan), show **Apply to My plan** (or “Replace My plan” / “Append”).  
+- Apply requires explicit click; never silent.  
+- Optional: open a short confirm preview of the markdown that will be written.  
+- Optional later: skill `side_effect: my_plan_draft` with the same accept gate.
+
+### Out of scope
+
+- Auto-writing My plan on every chat turn  
+- Overwriting without confirm  
+
+### Acceptance criteria (when built)
+
+1. After `/synthesize-plan`, user can apply the suggestion to My plan in one confirm action  
+2. My plan body updates and is included in later chat/evaluate context  
+3. No apply without user action  
+
+### Related
+
+- Phase 3 skills design: v1 synthesize-plan chat-only; “Apply to My plan” fast follow  
+
+---
+
+## FR-006: Persona view section regenerate
+
+**Status:** Backlog (Phase 3 Evaluate follow-on)  
+**Priority:** Low–medium  
+**Depends on:** Evaluate → draft/accepted views with optional `sections_json` (done)
+
+### Problem
+
+Evaluate flow design included **Regenerate section** (e.g. re-run only “open questions” or “labs”) without re-evaluating the entire chart. Today the user must re-run full Evaluate or edit markdown by hand.
+
+### Desired capability
+
+- On draft (and optionally accepted-as-new-draft) view detail: list sections and **Regenerate this section**.  
+- Call AI with narrow context + existing body + section id; merge result into draft.  
+- Preserve citations/fact-opinion where possible; mark draft dirty until accept.
+
+### Out of scope
+
+- Silent section updates without user action  
+- Multi-agent section specialists  
+
+### Acceptance criteria (when built)
+
+1. User can regenerate a single named section on a draft view  
+2. Rest of the view body remains unless that section is replaced  
+3. Accept still required before the view becomes current memory  
+
+### Related
+
+- Phase 3 design §6.2 Evaluate step 5  
+
+---
+
+## FR-007: Shared chart brief snapshot (AI `update_snapshot`)
+
+**Status:** Backlog (Phase 3 memory follow-on)  
+**Priority:** Low–medium  
+**Depends on:** Chart brief / persona views (done); context builder (done)
+
+### Problem
+
+First ship: Evaluate writes **persona views only**. The design also described a **shared factual snapshot** (at-a-glance brief layer) refreshed via an `update_snapshot` skill with review. Today the dashboard “snapshot” is live DB counts/recent labs, not a review-gated brief memory artifact.
+
+### Desired capability
+
+- Skill or Brief action: **Update snapshot** → draft shared snapshot (structured or markdown).  
+- User accept/reject; only accepted snapshot is injected as Layer B context.  
+- Clear separation from persona opinions (snapshot = shared facts / at-a-glance, not a persona lens).
+
+### Out of scope
+
+- Auto-refresh on every evaluate without opt-in  
+- Replacing live chart facts in SQLite  
+
+### Acceptance criteria (when built)
+
+1. User can produce a draft shared snapshot and accept it  
+2. Chat/evaluate context can include the accepted snapshot when scoped  
+3. Draft snapshots never appear in skill context  
+
+### Related
+
+- Phase 3 design §5.2 `update_snapshot`; §4 memory shape; first-ship decision: evaluate = persona view only  
+
+---
+
+## FR-008: Persona view version rollback
+
+**Status:** Backlog (Phase 3 brief follow-on)  
+**Priority:** Low–medium  
+**Depends on:** Version history + diff on views (done)
+
+### Problem
+
+Accepted views keep **version history** and a **diff vs previous**, but restoring an older accepted version as **current** (rollback) is incomplete or missing as a first-class action.
+
+### Desired capability
+
+- On version history: **Restore vN as current** (creates a new version or re-marks current — pick one model at design time; prefer new version copying vN body for auditability).  
+- Confirm dialog; do not delete history.  
+- Diff remains available after restore.
+
+### Out of scope
+
+- Deleting version history  
+- Branching multi-timeline edits  
+
+### Acceptance criteria (when built)
+
+1. User can restore a prior accepted version so chat/evaluate use that body as current  
+2. History still lists prior versions  
+3. Action is explicit and confirmed  
+
+### Related
+
+- Phase 3 extras: versions/rollback  
+
+---
+
+## FR-009: Chat → Evaluate affordance
+
+**Status:** Backlog (Phase 3 co-pilot follow-on)  
+**Priority:** Low  
+**Depends on:** Chat threads + Evaluate form (done)
+
+### Problem
+
+Design allowed chat to **soft-suggest** “Start Evaluate as {persona} with this focus?” without writing views. Users currently switch routes/manual focus themselves.
+
+### Desired capability
+
+- After a chat turn (especially with a persona lens), optional chip/button: **Run Evaluate** pre-filled with persona + focus note from the thread (e.g. last user message or summary).  
+- Navigates to Evaluate (or opens evaluate flow) with fields populated; does **not** auto-run without submit.  
+- Never writes a persona view until Evaluate completes + user accept path.
+
+### Out of scope
+
+- Auto-running Evaluate on every message  
+- Chat writing drafts without Evaluate  
+
+### Acceptance criteria (when built)
+
+1. User can jump from chat to Evaluate with persona/focus prefilled  
+2. No draft view is created until they run Evaluate  
+3. Chat history unchanged by the affordance alone  
+
+### Related
+
+- Phase 3 design §5.1 chat “May return a soft suggestion UI”  
+
+---
+
+## FR-010: Auto-invoke skills from free text (no slash)
+
+**Status:** Backlog (Phase 3 skills optional later; was non-goal for first skills ship)  
+**Priority:** Low  
+**Depends on:** Slash palette + skill registry (done)
+
+### Problem
+
+Skills only run via `/skill-name`. Users may type natural language (“check my meds”) and expect the med-check skill without knowing the slash name.
+
+### Desired capability
+
+- Optional router: classify user message → suggest or auto-run a matching skill (with clear UI that a skill was selected).  
+- Prefer **suggest chip** over silent auto-run for safety.  
+- User can disable auto-routing in settings.
+
+### Out of scope
+
+- Full agent tool loop / shell skills  
+- Bypassing safety suffix  
+
+### Acceptance criteria (when built)
+
+1. Natural language can surface the correct skill suggestion  
+2. User remains in control (confirm or one-tap) before skill run if auto-run is off  
+3. Slash palette remains the reliable path  
+
+### Related
+
+- Phase 3 skills design non-goal: auto-invoke without `/`  
+
+---
+
 ## FR backlog index
 
 | ID | Title | Notes |
 |----|--------|--------|
-| FR-001 | Lab analyte lay explanations (AI) | Lab literacy / co-pilot polish |
+| FR-001 | Lab analyte lay explanations (AI) | **Partial** — chat skill done; cache/UI left |
 | FR-002 | Cloud-data audit log | Privacy; was Phase 4 |
 | FR-003 | Encrypted backup export | Was Phase 4 |
 | FR-004 | Stronger app lock UX | Was Phase 4 |
+| FR-005 | Apply skill output to My plan | Phase 3 skills follow-on |
+| FR-006 | Persona view section regenerate | Phase 3 Evaluate follow-on |
+| FR-007 | Shared chart brief snapshot | Phase 3 memory follow-on |
+| FR-008 | Persona view version rollback | Phase 3 brief follow-on |
+| FR-009 | Chat → Evaluate affordance | Phase 3 co-pilot follow-on |
+| FR-010 | Auto-invoke skills (no slash) | Phase 3 skills optional later |

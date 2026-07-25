@@ -25,7 +25,7 @@ Add **slash-invoked skills** in Chat, authored as **SKILL.md** files (standard f
 ### 1.2 Non-goals
 
 - Full agent harness (tool loops, shell scripts, Skill tool from Grok TUI).
-- Auto-invoke skills from free text without `/` (optional later).
+- Auto-invoke skills from free text without `/` (backlog **FR-010**).
 - Skills that write clinical records (meds, labs, diagnoses).
 - Skills that auto-accept persona brief views.
 
@@ -42,7 +42,7 @@ Add **slash-invoked skills** in Chat, authored as **SKILL.md** files (standard f
 | Personas | Orthogonal lens; optional with skills (`allow_persona: true`) |
 | Safety | Always append `SAFETY_SYSTEM_SUFFIX`; skills cannot disable it |
 
-**v1 synthesize-plan:** chat-only reply that suggests My plan text; user pastes into My plan or we add “Apply to My plan” button in a fast follow. Keeps first ship simpler.
+**v1 synthesize-plan:** chat-only reply that suggests My plan text; user pastes into My plan. **“Apply to My plan”** is backlog **FR-005** (not an open Phase 3 milestone).
 
 ---
 

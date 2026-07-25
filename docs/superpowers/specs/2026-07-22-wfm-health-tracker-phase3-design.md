@@ -237,13 +237,17 @@ No automatic resolution.
 
 ### 5.2 Follow-on (designed, not first ship)
 
-| Skill | Purpose |
-|-------|---------|
-| `med_check` | Interaction/allergy/duplicate-oriented review |
-| `lab_interpret` | Panel/trend interpretation |
-| `analyte_explain` | FR-001 lay definitions + health impact (cacheable) |
-| `synthesize_plan` | Draft My plan from selected persona views |
-| `update_snapshot` | Refresh shared factual snapshot with review |
+Slash skill **runners** for med check, lab interpret, analyte explain, and synthesize plan shipped in the Phase 3 skills slice. Remaining product gaps are backlog FRs (not an open Phase 3 milestone):
+
+| Item | Backlog |
+|------|---------|
+| Cached analyte lay explanations in Analytes/lab UI | **FR-001** (chat `/analyte-explain` already shipped) |
+| Apply synthesize (etc.) → My plan with confirm | **FR-005** |
+| Regenerate a single persona-view section | **FR-006** |
+| Shared brief snapshot / `update_snapshot` with review | **FR-007** |
+| Rollback persona view to a prior version | **FR-008** |
+| Chat soft chip → Evaluate prefilled | **FR-009** |
+| Auto-invoke skills without `/` | **FR-010** |
 
 Follow-on skills **must not** write persona views without explicit user confirmation (same as Evaluate).
 
@@ -275,7 +279,7 @@ Follow-on skills **must not** write persona views without explicit user confirma
 2. If Grok → cloud confirm (approx context size).  
 3. Run skill → draft view.  
 4. Redirect to draft review: body, citations, fact/opinion, topics.  
-5. User edits markdown/sections → **Accept** / **Reject** / **Regenerate section**.  
+5. User edits markdown/sections → **Accept** / **Reject** (section regenerate → **FR-006**).  
 6. Accept → version++, supersede prior current accepted for that persona.
 
 ### 6.3 Brief UI
