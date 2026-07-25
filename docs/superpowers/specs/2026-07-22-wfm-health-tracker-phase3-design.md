@@ -352,7 +352,8 @@ Follow-on skills **must not** write persona views without explicit user confirma
 3. **Brief UI** (list, detail, diff, conflict flags, export)  
 4. **Chat skill + threads UI**  
 5. **Cloud confirm, disclaimers, polish**  
-6. *(Later milestone)* med_check, lab_interpret, FR-001, synthesize_plan  
+6. **Slash skills** (med-check, lab-interpret, analyte-explain, synthesize-plan, create/delete) — shipped  
+7. **Backlog only (not Phase 3):** FR-001 UI cache, FR-005–FR-010 (see `FUTURE-REQUIREMENTS.md`)
 
 ---
 
@@ -374,7 +375,7 @@ Follow-on skills **must not** write persona views without explicit user confirma
 - Streaming vs non-streaming chat (prefer stream if easy with Grok/Ollama).  
 - Whether snapshot auto-updates on evaluate or only via separate skill (recommend: evaluate may refresh snapshot **as draft** only if user opts in; default first ship: evaluate writes **persona view only**).  
 
-**Decision for first ship:** Evaluate writes **persona view only**. Shared snapshot can be a simple structured “at a glance” generated from DB without AI, or a later skill.
+**Decision for first ship:** Evaluate writes **persona view only**. Shared AI snapshot is backlog **FR-007**.
 
 ---
 
