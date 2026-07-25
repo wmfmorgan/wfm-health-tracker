@@ -633,6 +633,114 @@ BMI may be computed from height + weight rather than always stored.
 
 ---
 
+## FR-014: Dashboard analyte trends
+
+**Status:** Backlog  
+**Priority:** Medium–high (at-a-glance chart monitoring)  
+**Depends on:** Lab panels + results (done); analytes catalog (done); dashboard page (done)
+
+### Problem
+
+The dashboard shows counts and recent activity, but not **how selected lab analytes are moving over time**. For chronic care, trends (e.g. CRP, calprotectin, creatinine) matter more than a single latest number buried in a panel.
+
+### Desired capability
+
+On the **dashboard**, show **trend charts (or sparklines)** for **user-selected analytes**:
+
+| Area | Description |
+|------|-------------|
+| **Selection** | User picks which analytes to pin/track (settings on dashboard or from analyte list) |
+| **Series** | Time series from lab results across panels (date = panel `collectedOn` or equivalent) |
+| **Display** | Line/sparkline per selected analyte; value + unit; optional ref-range band if available |
+| **Empty** | Clear empty state when no history or no selection |
+
+### UX (draft)
+
+- Dashboard section: **Lab trends**  
+- “Manage tracked analytes” multi-select (reuse multi-select patterns)  
+- One chart per analyte or small multi-series if units match (prefer one chart per analyte for mixed units)  
+- Click through to full history (**FR-015**) or lab panel  
+
+### Data / query (draft)
+
+- Aggregate lab results by normalized analyte name (or `analyte_id` if linked) ordered by collection date  
+- Persist selection: settings key or `tracked_analytes` table  
+
+### Out of scope
+
+- Clinical decision alerts / auto-diagnosis from trends  
+- Full statistical analytics package  
+- Wearable streams (see FR-013 for vitals)  
+
+### Acceptance criteria (when built)
+
+1. User can select one or more analytes to show on the dashboard  
+2. Dashboard renders a trend for each selected analyte from historical lab results  
+3. Selection persists across sessions  
+4. Missing/sparse data fails gracefully  
+5. Links exist to deeper history or source lab where practical  
+
+### Related
+
+- Dashboard; labs; analytes; **FR-015** full analyte results table  
+
+---
+
+## FR-015: Analyte results table (latest + expandable history)
+
+**Status:** Backlog  
+**Priority:** Medium–high  
+**Depends on:** Lab panels + results (done); analytes catalog (done); document links on panels (done where present)
+
+### Problem
+
+Analytes exist as a catalog, and results live inside individual lab panels. There is no **single table of all analytes with latest values** and a way to expand **past results**, each row/history entry **linked back to the source lab panel and document** when available.
+
+### Desired capability
+
+An **analyte-centric results table**:
+
+| Behavior | Description |
+|----------|-------------|
+| **Default rows** | One row per analyte (or per analyte that has ≥1 result): name, latest value, unit, flag, collection date |
+| **Expand row** | Selecting/expanding a row shows **past results** (date, value, unit, flag) in chronological order |
+| **Source links** | Each result (latest and historical) links to the **lab panel** and, when linked, the **source document/PDF** that produced or attaches to that panel |
+| **Navigation** | Open lab detail and/or open document viewer from the history line |
+
+### UX (draft)
+
+- Route: extend **Analytes** page or new **Lab results by analyte** view  
+- Compact table; expand/collapse chevron on row  
+- Badges for abnormal flags on latest  
+- Empty history: “No results yet”  
+- Optional filter: only analytes with results; search by name  
+
+### Data / query (draft)
+
+- Join `lab_results` → `lab_panels` → document links (`documents` / link table)  
+- “Latest” = max `collected_on` (or panel created date fallback) per analyte name/id  
+- History = all matching results sorted desc  
+
+### Out of scope
+
+- Editing results from this table (edit remains on lab panel)  
+- AI interpretation on this page (FR-001 / lab-interpret are separate)  
+- Replacing panel-centric lab CRUD  
+
+### Acceptance criteria (when built)
+
+1. Table shows analytes with their **latest** result summary  
+2. Expanding a row lists **prior results** for that analyte  
+3. Each history line (and latest) can navigate to the **source lab panel**  
+4. When a document is linked to that panel, user can open the **source document**  
+5. Analytes with no results are handled clearly (hidden or empty state)  
+
+### Related
+
+- Labs, documents, analytes catalog; **FR-014** dashboard trends (can deep-link here)  
+
+---
+
 ## FR backlog index
 
 | ID | Title | Notes |
@@ -650,3 +758,5 @@ BMI may be computed from height + weight rather than always stored.
 | FR-011 | AI-maintained health profile (user-editable) | Co-pilot context; review-gated AI refresh |
 | FR-012 | Drug interaction skill + med/supp UI flags | Safety-adjacent; e.g. doxy ↔ Zn/Mg |
 | FR-013 | Vitals & body metrics time series | BP, weight, BMI, etc. — catalog TBD |
+| FR-014 | Dashboard analyte trends | User-selected analyte sparklines/charts |
+| FR-015 | Analyte results table + expandable history | Latest + past; links to lab/document |

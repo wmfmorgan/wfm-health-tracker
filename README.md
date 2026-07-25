@@ -237,6 +237,8 @@ Backlog FRs (see `docs/superpowers/specs/FUTURE-REQUIREMENTS.md`):
 - **FR-011** — AI-maintained health profile (user-editable; used in chat/evaluate)  
 - **FR-012** — drug interaction skill + flags on meds/supplements  
 - **FR-013** — vitals & body metrics time series (BP, weight, BMI, … catalog TBD)  
+- **FR-014** — dashboard trends for selected analytes  
+- **FR-015** — analyte results table (latest + expandable history, lab/document links)  
 
 Also later / non-goals for now:
 
