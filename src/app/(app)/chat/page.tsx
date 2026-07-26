@@ -18,6 +18,7 @@ const FULL_SCOPE = {
   labs: true,
   tests: true,
   procedures: true,
+  vitals: true,
   acceptedViews: true,
   myPlan: true,
 } as const;

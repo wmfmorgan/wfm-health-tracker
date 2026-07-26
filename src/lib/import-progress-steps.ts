@@ -10,8 +10,8 @@ export function buildImportSteps(
   steps.push(
     `Calling ${providerLabel}…`,
     "Waiting for AI response…",
-    "Parsing structured lab drafts…",
-    "Saving draft panels for review…",
+    "Parsing labs and vitals drafts…",
+    "Saving drafts for review…",
   );
   return steps;
 }

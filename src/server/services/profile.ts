@@ -4,6 +4,7 @@ import { bootstrapDb } from "@/server/db/bootstrap";
 import { profile } from "@/server/db/schema";
 import { nowIso } from "@/lib/dates";
 import type { ProfileInput } from "@/lib/validation/profile";
+import { recordHeightWeightFromProfileChange } from "@/server/services/metrics";
 
 const PROFILE_ID = "default";
 
@@ -27,7 +28,7 @@ export function getProfile() {
 export function upsertProfile(input: ProfileInput) {
   bootstrapDb();
   const db = getDb();
-  getProfile();
+  const previous = getProfile();
   const updatedAt = nowIso();
   db.update(profile)
     .set({
@@ -46,6 +47,23 @@ export function upsertProfile(input: ProfileInput) {
     })
     .where(eq(profile.id, PROFILE_ID))
     .run();
+
+  // When height/weight change, append vitals history (does not re-write profile)
+  recordHeightWeightFromProfileChange({
+    previous: {
+      heightValue: previous.heightValue,
+      heightUnit: previous.heightUnit,
+      weightValue: previous.weightValue,
+      weightUnit: previous.weightUnit,
+    },
+    next: {
+      heightValue: input.heightValue ?? null,
+      heightUnit: input.heightUnit ?? null,
+      weightValue: input.weightValue ?? null,
+      weightUnit: input.weightUnit ?? null,
+    },
+  });
+
   return getProfile();
 }
 

@@ -287,6 +287,58 @@ export function migrate() {
     model TEXT,
     created_at TEXT NOT NULL
   )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS metric_sessions (
+    id TEXT PRIMARY KEY,
+    measured_at TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'manual',
+    device_label TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS metric_readings (
+    id TEXT PRIMARY KEY,
+    session_id TEXT REFERENCES metric_sessions(id) ON DELETE CASCADE,
+    metric_type TEXT NOT NULL,
+    value_primary REAL NOT NULL,
+    value_secondary REAL,
+    unit TEXT NOT NULL,
+    category TEXT,
+    measured_at TEXT NOT NULL,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_metric_readings_type_date
+    ON metric_readings (metric_type, measured_at DESC)`);
+  db.run(sql`CREATE INDEX IF NOT EXISTS idx_metric_readings_session
+    ON metric_readings (session_id)`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS draft_metric_sessions (
+    id TEXT PRIMARY KEY,
+    import_job_id TEXT NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    measured_at TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'device_report',
+    device_label TEXT,
+    notes TEXT,
+    review_status TEXT NOT NULL DEFAULT 'pending',
+    committed_session_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  db.run(sql`CREATE TABLE IF NOT EXISTS draft_metric_readings (
+    id TEXT PRIMARY KEY,
+    draft_session_id TEXT NOT NULL REFERENCES draft_metric_sessions(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    metric_type TEXT NOT NULL,
+    value_primary REAL NOT NULL,
+    value_secondary REAL,
+    unit TEXT NOT NULL,
+    category TEXT,
+    notes TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
 
   // Additive migrations for existing DBs (CREATE TABLE IF NOT EXISTS won't alter columns)
   ensureColumn("medications", "how_it_helps", "TEXT");

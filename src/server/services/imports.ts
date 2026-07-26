@@ -6,6 +6,8 @@ import {
   importJobs,
   draftLabPanels,
   draftLabResults,
+  draftMetricSessions,
+  draftMetricReadings,
   documents,
 } from "@/server/db/schema";
 import { newId } from "@/lib/ids";
@@ -32,8 +34,11 @@ import { extractLabsFromText } from "@/server/ai/extract-labs";
 import { warmOllamaModel } from "@/server/ai/ollama";
 import { getAIProvider } from "@/server/ai/router";
 import { createLabPanel } from "@/server/services/labs";
+import { createSession } from "@/server/services/metrics";
 import { linkDocument, savePdfDocument, getDocumentFilePath } from "@/server/services/documents";
 import { getAiSettings } from "@/server/services/settings";
+import { mapExtractedMetricType, defaultUnitForMetric } from "@/lib/metrics/map-extracted";
+import { getMetricDef } from "@/lib/metrics/catalog";
 
 const OPEN_STATUSES = [
   "pending",
@@ -45,13 +50,20 @@ const OPEN_STATUSES = [
 export type ImportJobRow = typeof importJobs.$inferSelect;
 export type DraftLabPanelRow = typeof draftLabPanels.$inferSelect;
 export type DraftLabResultRow = typeof draftLabResults.$inferSelect;
+export type DraftMetricSessionRow = typeof draftMetricSessions.$inferSelect;
+export type DraftMetricReadingRow = typeof draftMetricReadings.$inferSelect;
 
 export type DraftPanelWithResults = DraftLabPanelRow & {
   results: DraftLabResultRow[];
 };
 
+export type DraftVitalSessionWithReadings = DraftMetricSessionRow & {
+  readings: DraftMetricReadingRow[];
+};
+
 export type ImportJobWithDrafts = ImportJobRow & {
   drafts: DraftPanelWithResults[];
+  vitalDrafts: DraftVitalSessionWithReadings[];
 };
 
 export function createImportJob(opts: {
@@ -114,10 +126,27 @@ export function getImportJob(id: string): ImportJobWithDrafts | undefined {
     return { ...panel, results };
   });
 
+  const vitalSessions = getDb()
+    .select()
+    .from(draftMetricSessions)
+    .where(eq(draftMetricSessions.importJobId, id))
+    .orderBy(asc(draftMetricSessions.sortOrder), asc(draftMetricSessions.createdAt))
+    .all();
+
+  const vitalDrafts: DraftVitalSessionWithReadings[] = vitalSessions.map((session) => {
+    const readings = getDb()
+      .select()
+      .from(draftMetricReadings)
+      .where(eq(draftMetricReadings.draftSessionId, session.id))
+      .orderBy(asc(draftMetricReadings.sortOrder), asc(draftMetricReadings.createdAt))
+      .all();
+    return { ...session, readings };
+  });
+
   // Legacy: fully-rejected imports used to be stored as "completed".
   let status = job.status;
   if (status === "completed") {
-    const terminal = terminalStatusFromDrafts(panels);
+    const terminal = terminalStatusFromDrafts(panels, vitalSessions);
     if (terminal === "rejected") {
       status = "rejected";
       getDb()
@@ -128,19 +157,21 @@ export function getImportJob(id: string): ImportJobWithDrafts | undefined {
     }
   }
 
-  return { ...job, status, drafts };
+  return { ...job, status, drafts, vitalDrafts };
 }
 
 /**
  * When every draft is resolved with zero accepts, job is rejected (not completed).
- * Used for new writes and for correcting older rows that were stored as completed.
+ * Labs + vitals drafts are considered together.
  */
 function terminalStatusFromDrafts(
   panels: Array<{ reviewStatus: string }>,
+  vitalSessions: Array<{ reviewStatus: string }> = [],
 ): "completed" | "rejected" | null {
-  if (panels.length === 0) return "rejected";
-  if (panels.some((p) => p.reviewStatus === "pending")) return null;
-  return panels.some((p) => p.reviewStatus === "accepted")
+  const all = [...panels, ...vitalSessions];
+  if (all.length === 0) return "rejected";
+  if (all.some((p) => p.reviewStatus === "pending")) return null;
+  return all.some((p) => p.reviewStatus === "accepted")
     ? "completed"
     : "rejected";
 }
@@ -166,7 +197,12 @@ export function listImportJobs(): Array<ImportJobRow & { filename?: string }> {
         .from(draftLabPanels)
         .where(eq(draftLabPanels.importJobId, r.job.id))
         .all();
-      const terminal = terminalStatusFromDrafts(panels);
+      const vitals = getDb()
+        .select({ reviewStatus: draftMetricSessions.reviewStatus })
+        .from(draftMetricSessions)
+        .where(eq(draftMetricSessions.importJobId, r.job.id))
+        .all();
+      const terminal = terminalStatusFromDrafts(panels, vitals);
       if (terminal === "rejected") {
         status = "rejected";
         getDb()
@@ -223,13 +259,17 @@ export function writeDraftsFromExtracted(jobId: string, extracted: ExtractedLabs
   const job = getDb().select().from(importJobs).where(eq(importJobs.id, jobId)).get();
   if (!job) throw new Error(`Import job not found: ${jobId}`);
 
-  const data = extractedLabsSchema.parse(extracted);
+  const data = extractedLabsSchema.parse({
+    panels: extracted.panels ?? [],
+    vitalSessions: extracted.vitalSessions ?? [],
+  });
   const t = nowIso();
   const db = getDb();
 
   const tx = getSqlite().transaction(() => {
     // Replace any existing drafts for this job (cascade deletes results)
     db.delete(draftLabPanels).where(eq(draftLabPanels.importJobId, jobId)).run();
+    db.delete(draftMetricSessions).where(eq(draftMetricSessions.importJobId, jobId)).run();
 
     data.panels.forEach((panel, panelIndex) => {
       const panelId = newId();
@@ -262,6 +302,46 @@ export function writeDraftsFromExtracted(jobId: string, extracted: ExtractedLabs
             refLow: r.refLow ?? null,
             refHigh: r.refHigh ?? null,
             flag: r.flag ?? null,
+            notes: r.notes ?? null,
+            createdAt: t,
+            updatedAt: t,
+          })
+          .run();
+      });
+    });
+
+    data.vitalSessions.forEach((session, sessionIndex) => {
+      const sessionId = newId();
+      db.insert(draftMetricSessions)
+        .values({
+          id: sessionId,
+          importJobId: jobId,
+          sortOrder: sessionIndex,
+          measuredAt: session.measuredAt,
+          source: session.source ?? "device_report",
+          deviceLabel: session.deviceLabel ?? null,
+          notes: session.notes ?? null,
+          reviewStatus: "pending",
+          committedSessionId: null,
+          createdAt: t,
+          updatedAt: t,
+        })
+        .run();
+
+      session.readings.forEach((r, readingIndex) => {
+        const metricType =
+          mapExtractedMetricType(r.metricType) ?? r.metricType;
+        const unit = defaultUnitForMetric(metricType, r.unit);
+        db.insert(draftMetricReadings)
+          .values({
+            id: newId(),
+            draftSessionId: sessionId,
+            sortOrder: readingIndex,
+            metricType,
+            valuePrimary: r.valuePrimary,
+            valueSecondary: r.valueSecondary ?? null,
+            unit,
+            category: r.category ?? null,
             notes: r.notes ?? null,
             createdAt: t,
             updatedAt: t,
@@ -452,6 +532,118 @@ export function rejectDraftPanel(draftPanelId: string): void {
   recomputeJobCompletion(draft.importJobId);
 }
 
+export function acceptDraftVitalSession(draftSessionId: string): {
+  sessionId: string;
+  importJobId: string;
+  jobStatus: ImportJobStatus;
+} {
+  bootstrapDb();
+  const draft = getDb()
+    .select()
+    .from(draftMetricSessions)
+    .where(eq(draftMetricSessions.id, draftSessionId))
+    .get();
+  if (!draft) throw new Error(`Draft vital session not found: ${draftSessionId}`);
+  if (draft.reviewStatus !== "pending") {
+    throw new Error(`Draft vital session is already ${draft.reviewStatus}`);
+  }
+
+  const job = getDb()
+    .select()
+    .from(importJobs)
+    .where(eq(importJobs.id, draft.importJobId))
+    .get();
+  if (!job) throw new Error(`Import job not found: ${draft.importJobId}`);
+
+  const readingRows = getDb()
+    .select()
+    .from(draftMetricReadings)
+    .where(eq(draftMetricReadings.draftSessionId, draftSessionId))
+    .orderBy(asc(draftMetricReadings.sortOrder), asc(draftMetricReadings.createdAt))
+    .all();
+
+  if (readingRows.length === 0) {
+    throw new Error("Draft vital session has no readings");
+  }
+
+  const readings = readingRows.map((r) => {
+    const metricType = mapExtractedMetricType(r.metricType) ?? r.metricType;
+    const def = getMetricDef(metricType);
+    const unit = defaultUnitForMetric(metricType, r.unit);
+    return {
+      metricType,
+      valuePrimary: r.valuePrimary,
+      valueSecondary:
+        def?.mode === "bp" ? (r.valueSecondary ?? null) : (r.valueSecondary ?? null),
+      unit,
+      category: r.category,
+    };
+  });
+
+  const live = createSession({
+    measuredAt: draft.measuredAt,
+    source:
+      draft.source === "manual" || draft.source === "device_report"
+        ? draft.source
+        : "device_report",
+    deviceLabel: draft.deviceLabel,
+    notes: draft.notes
+      ? `${draft.notes}\n\n(Imported from PDF)`
+      : "Imported from PDF",
+    readings,
+  });
+
+  linkDocument(job.documentId, "metric_session", live.id);
+
+  const t = nowIso();
+  getDb()
+    .update(draftMetricSessions)
+    .set({
+      reviewStatus: "accepted",
+      committedSessionId: live.id,
+      updatedAt: t,
+    })
+    .where(eq(draftMetricSessions.id, draftSessionId))
+    .run();
+
+  recomputeJobCompletion(job.id);
+  const updated = getDb()
+    .select({ status: importJobs.status })
+    .from(importJobs)
+    .where(eq(importJobs.id, job.id))
+    .get();
+
+  return {
+    sessionId: live.id,
+    importJobId: job.id,
+    jobStatus: (updated?.status ?? job.status) as ImportJobStatus,
+  };
+}
+
+export function rejectDraftVitalSession(draftSessionId: string): void {
+  bootstrapDb();
+  const draft = getDb()
+    .select()
+    .from(draftMetricSessions)
+    .where(eq(draftMetricSessions.id, draftSessionId))
+    .get();
+  if (!draft) throw new Error(`Draft vital session not found: ${draftSessionId}`);
+  if (draft.reviewStatus !== "pending") {
+    throw new Error(`Draft vital session is already ${draft.reviewStatus}`);
+  }
+
+  getDb()
+    .update(draftMetricSessions)
+    .set({
+      reviewStatus: "rejected",
+      updatedAt: nowIso(),
+    })
+    .where(eq(draftMetricSessions.id, draftSessionId))
+    .run();
+
+  recomputeJobCompletion(draft.importJobId);
+}
+
 export function acceptAllPending(jobId: string): {
   importJobId: string;
   jobStatus: ImportJobStatus;
@@ -460,7 +652,7 @@ export function acceptAllPending(jobId: string): {
   const job = getDb().select().from(importJobs).where(eq(importJobs.id, jobId)).get();
   if (!job) throw new Error(`Import job not found: ${jobId}`);
 
-  const pending = getDb()
+  const pendingPanels = getDb()
     .select()
     .from(draftLabPanels)
     .where(eq(draftLabPanels.importJobId, jobId))
@@ -468,8 +660,20 @@ export function acceptAllPending(jobId: string): {
     .all()
     .filter((p) => p.reviewStatus === "pending");
 
-  for (const panel of pending) {
+  for (const panel of pendingPanels) {
     acceptDraftPanel(panel.id);
+  }
+
+  const pendingVitals = getDb()
+    .select()
+    .from(draftMetricSessions)
+    .where(eq(draftMetricSessions.importJobId, jobId))
+    .orderBy(asc(draftMetricSessions.sortOrder), asc(draftMetricSessions.createdAt))
+    .all()
+    .filter((s) => s.reviewStatus === "pending");
+
+  for (const session of pendingVitals) {
+    acceptDraftVitalSession(session.id);
   }
 
   const updated = getDb()
@@ -510,6 +714,23 @@ export function discardImportJob(jobId: string): void {
         .run();
     }
 
+    const pendingVitals = db
+      .select()
+      .from(draftMetricSessions)
+      .where(eq(draftMetricSessions.importJobId, jobId))
+      .all()
+      .filter((s) => s.reviewStatus === "pending");
+
+    for (const session of pendingVitals) {
+      db.update(draftMetricSessions)
+        .set({
+          reviewStatus: "rejected",
+          updatedAt: t,
+        })
+        .where(eq(draftMetricSessions.id, session.id))
+        .run();
+    }
+
     db.update(importJobs)
       .set({
         status: "discarded",
@@ -544,7 +765,13 @@ export function recomputeJobCompletion(jobId: string): void {
     .where(eq(draftLabPanels.importJobId, jobId))
     .all();
 
-  const nextStatus = terminalStatusFromDrafts(panels);
+  const vitals = getDb()
+    .select()
+    .from(draftMetricSessions)
+    .where(eq(draftMetricSessions.importJobId, jobId))
+    .all();
+
+  const nextStatus = terminalStatusFromDrafts(panels, vitals);
   if (!nextStatus) return;
 
   getDb()
@@ -665,6 +892,8 @@ export async function runExtractForJob(
 
     writeDraftsFromExtracted(jobId, extracted);
     setJobStatus(jobId, "ready", { errorMessage: null });
+    // Empty extract (no labs, no vitals) → rejected immediately
+    recomputeJobCompletion(jobId);
   } catch (e) {
     const message =
       e instanceof PdfTextError

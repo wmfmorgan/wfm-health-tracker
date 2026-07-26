@@ -7,6 +7,7 @@ export const entityTypeSchema = z.enum([
   "lab_panel",
   "test",
   "procedure",
+  "metric_session",
 ]);
 
 export type EntityType = z.infer<typeof entityTypeSchema>;

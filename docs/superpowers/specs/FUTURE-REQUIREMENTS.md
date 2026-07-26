@@ -570,7 +570,7 @@ A **Health profile** document (markdown and/or structured sections) that:
 
 ## FR-013: Vitals & body metrics time series
 
-**Status:** Backlog  
+**Status:** Done (2026-07-25) — sessions for body-comp scans + ad-hoc BP/height/weight/glucose/etc.; dual-write profile height/weight; BMI computed; co-pilot context  
 **Priority:** Medium–high  
 **Depends on:** Profile height/weight as single current values (done—keep or migrate carefully)
 
@@ -867,6 +867,108 @@ Attach **clinical discussion notes** to labs and tests:
 
 ---
 
+## FR-018: OCR / image import (scanned PDFs + PNG/JPEG)
+
+**Status:** Backlog  
+**Priority:** Medium–high (unlocks phone screenshots and image-only lab/body-comp reports)  
+**Depends on:** Import pipeline with labs + vitals drafts (done); dual AI providers / Ollama router (done); metric catalog + draft vitals accept path (done)
+
+### Problem
+
+Import only accepts **digital PDFs with a selectable text layer**. That blocks:
+
+| Input | Why it fails today |
+|-------|---------------------|
+| **PNG / JPEG screenshots** | File picker + server reject non-PDF; no vision/OCR path |
+| **Scanned / image-only PDFs** | `pdf-parse` finds no text → “OCR not available” failure |
+| **Body-comp device screenshots** (e.g. InBody-style phone captures) | Same as PNG; user must retype into `/vitals` |
+
+Phase 2 design deliberately deferred OCR; it is now a first-class backlog item rather than a vague non-goal.
+
+### Desired capability
+
+Extend **AI import** so image-based documents can enter the **same review → accept** path as text PDFs:
+
+1. **OCR / vision step** — turn image (or image-only PDF pages) into text (or structured intermediate).  
+2. **Existing structured extract** — labs + vitals (`panels` + `vitalSessions`) from that text (or multimodal end-to-end if preferred).  
+3. **Review UI** — same draft lab panels + draft vitals sessions; nothing committed until user accepts.
+
+### Inputs (v1)
+
+| Format | Notes |
+|--------|--------|
+| **PNG, JPEG** | Primary for phone screenshots of reports |
+| **Image-only PDF** | Raster pages with no/insufficient text layer; fall back to OCR after text extract fails or is too short |
+| **Text PDF** | Keep current path (no OCR); optional skip |
+
+Optional later: multi-page PDF OCR, HEIC, WebP.
+
+### Provider / model strategy (draft)
+
+Prefer **local-first** for PHI on images:
+
+| Path | Role |
+|------|------|
+| **Ollama + OCR/vision model** | Default OCR. Recommended starting point: **`glm-ocr`** (small multimodal OCR model in Ollama library; image → text). Configurable model name in Settings (same spirit as Ollama extract model). |
+| **Ollama text model** | Optional second step: structured labs/vitals JSON from OCR text (reuse current extract). |
+| **Grok / cloud vision** | Opt-in only; cloud disclosure + size hints; prefer FR-002 audit log when both exist |
+
+Do **not** require cloud for OCR to work.
+
+### Pipeline (draft)
+
+```
+upload (pdf | png | jpeg)
+  → if PDF with usable text layer → existing text extract path
+  → else if image or image-only PDF → OCR/vision (e.g. Ollama glm-ocr) → text
+  → structured extract (labs + vitalSessions) → draft review → accept/reject
+```
+
+- Store original file under `data/uploads/` (extend document store beyond PDF-only).  
+- Link accepted labs / vitals sessions to the source document as today.  
+- Progress UI: add step(s) for “Running OCR…” when applicable.
+
+### UX (draft)
+
+- Import form: accept `application/pdf,.pdf,image/png,.png,image/jpeg,.jpg,.jpeg`  
+- Clear copy: screenshots and scans supported when Ollama OCR model is available  
+- Settings: Ollama OCR model id (default e.g. `glm-ocr`), optional “always OCR PDF” toggle (default off)  
+- Failure modes: OCR model missing → actionable message (`ollama pull glm-ocr`); unreadable image → failed job with reason  
+- Always: assistive / not medical advice; review before accept  
+
+### Data / implementation notes (draft)
+
+- Extend `savePdfDocument` (or rename) to allow image content types and storage extension.  
+- Ollama client: support **images** on chat/generate (base64) for OCR model.  
+- Keep extracted OCR text in job metadata or temp (optional debug; not required in UI v1).  
+- Size limits: reuse/adjust `MAX_UPLOAD_BYTES`; consider max image dimension downscale before OCR for large phone photos.
+
+### Out of scope (v1)
+
+- Real-time camera capture in-app  
+- Handwriting-first notes (printed/report screenshots first)  
+- Guaranteed 100% field accuracy without review  
+- Commercial cloud OCR SaaS as a hard dependency  
+- Multi-user document inbox  
+
+### Acceptance criteria (when built)
+
+1. User can upload a **PNG or JPEG** (and/or image-only PDF) on Import  
+2. System runs **local OCR/vision** via Ollama when configured (e.g. `glm-ocr`)  
+3. OCR text feeds into **labs and/or vitals** draft extract; user reviews and accepts as today  
+4. Text-layer PDFs still work **without** requiring OCR  
+5. Missing OCR model / OCR failure produces a clear, recoverable error  
+6. Cloud vision, if offered, is opt-in with disclosure (and audit when FR-002 exists)  
+7. README / settings document model pull (`ollama pull glm-ocr`) and privacy (local vs cloud)  
+
+### Related
+
+- Phase 2 design non-goal “OCR / scanned PDFs” — this FR promotes it  
+- Import labs + vitals drafts; FR-013 vitals; dual provider router  
+- Candidate local model: Ollama **`glm-ocr`** (Z.ai GLM-OCR; multimodal document OCR)  
+
+---
+
 ## FR backlog index
 
 | ID | Title | Notes |
@@ -883,8 +985,9 @@ Attach **clinical discussion notes** to labs and tests:
 | FR-010 | Auto-invoke skills (no slash) | Phase 3 skills optional later |
 | FR-011 | AI-maintained health profile (user-editable) | Co-pilot context; review-gated AI refresh |
 | FR-012 | Drug interaction skill + med/supp UI flags | Safety-adjacent; e.g. doxy ↔ Zn/Mg |
-| FR-013 | Vitals & body metrics time series | BP, weight, BMI, etc. — catalog TBD |
+| FR-013 | Vitals & body metrics time series | **Done** — scans + ad-hoc vitals + glucose; dual-write profile |
 | FR-014 | Dashboard analyte trends | **Done** — 5 pins + ad-hoc; SVG sparklines |
 | FR-015 | Analyte results table + expandable history | **Done** — table + aliases (confirm merge) |
 | FR-016 | Symptoms log + AI chart cross-check | Log symptoms; AI vs labs/dx/meds |
 | FR-017 | Doctor-visit notes on labs and tests | Dated discussion notes per lab/test |
+| FR-018 | OCR / image import (scanned PDF + PNG/JPEG) | e.g. Ollama `glm-ocr` → labs/vitals drafts |

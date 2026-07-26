@@ -23,6 +23,7 @@ const EVALUATE_SCOPE: ChartContextScope = {
   labs: true,
   tests: true,
   procedures: true,
+  vitals: true,
   acceptedViews: true,
   myPlan: true,
 };

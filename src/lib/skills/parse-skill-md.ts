@@ -147,6 +147,7 @@ function asScope(raw: unknown): ChartContextScope {
     labs: pick("labs", true),
     tests: pick("tests", false),
     procedures: pick("procedures", false),
+    vitals: pick("vitals", true),
     acceptedViews: pick("acceptedViews", true) || pick("accepted_views" as never, true),
     myPlan: pick("myPlan", true) || pick("my_plan" as never, true),
   };

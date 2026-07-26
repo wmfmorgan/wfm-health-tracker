@@ -29,6 +29,7 @@ export const DEFAULT_SKILL_SCOPE: ChartContextScope = {
   labs: true,
   tests: false,
   procedures: false,
+  vitals: true,
   acceptedViews: true,
   myPlan: true,
 };

@@ -13,6 +13,11 @@ import { listMedications } from "@/server/services/medications";
 import { listProcedures } from "@/server/services/procedures";
 import { getProfile } from "@/server/services/profile";
 import { listSupplements } from "@/server/services/supplements";
+import {
+  formatReadingDisplay,
+  listRecentForContext,
+} from "@/server/services/metrics";
+import { getMetricDef } from "@/lib/metrics/catalog";
 
 export type { AcceptedPersonaView };
 export { listCurrentAcceptedViews };
@@ -26,6 +31,7 @@ export type ChartContextScope = {
   labs?: boolean;
   tests?: boolean;
   procedures?: boolean;
+  vitals?: boolean;
   acceptedViews?: boolean;
   myPlan?: boolean;
   /** When non-empty, only these medication ids (otherwise all active). */
@@ -119,6 +125,54 @@ function formatProfileSection(): Section {
     dropPriority: 0,
     text: lines.join("\n"),
     citations: [{ entityType: "profile", entityId: p.id, label: "Profile" }],
+  };
+}
+
+function formatVitalsSection(): Section {
+  const { latestCore, recentSessions } = listRecentForContext({
+    perTypeLimit: 2,
+    sessionLimit: 2,
+  });
+
+  const lines: string[] = ["## Vitals & body metrics"];
+
+  if (latestCore.length === 0 && recentSessions.length === 0) {
+    lines.push("- (none recorded)");
+  } else {
+    // Deduplicate display: group by type showing most recent first
+    const seen = new Set<string>();
+    for (const r of latestCore) {
+      const key = `${r.metricType}:${r.measuredAt}:${r.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const def = getMetricDef(r.metricType);
+      const label = def?.label ?? r.metricType;
+      lines.push(
+        `- ${label}: ${formatReadingDisplay(r)} (${r.measuredAt})${r.notes ? ` — ${r.notes}` : ""}`,
+      );
+    }
+    for (const s of recentSessions) {
+      lines.push(
+        `- Body composition session ${s.measuredAt}${s.deviceLabel ? ` (${s.deviceLabel})` : ""}:`,
+      );
+      for (const r of s.readings.slice(0, 20)) {
+        const def = getMetricDef(r.metricType);
+        lines.push(
+          `  - ${def?.label ?? r.metricType}: ${formatReadingDisplay(r)}${r.category ? ` [${r.category}]` : ""}`,
+        );
+      }
+    }
+  }
+
+  lines.push(
+    "- _Device health scores and metabolic age are device-specific; educational only._",
+  );
+
+  return {
+    id: "vitals",
+    dropPriority: 20,
+    text: lines.join("\n"),
+    citations: [{ entityType: "vitals", entityId: "summary", label: "Vitals" }],
   };
 }
 
@@ -471,6 +525,7 @@ export function buildChartContext(opts: {
   const peerViews: Section[] = [];
 
   if (scope.profile) core.push(formatProfileSection());
+  if (scope.vitals) core.push(formatVitalsSection());
   if (scope.allergies) core.push(formatAllergiesSection());
   if (scope.diagnoses) core.push(formatDiagnosesSection());
   if (scope.medications) {

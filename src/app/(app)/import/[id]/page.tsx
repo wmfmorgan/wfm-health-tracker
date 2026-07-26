@@ -11,6 +11,7 @@ import {
 } from "@/server/actions/imports";
 import { AutoRefresh } from "@/components/import/auto-refresh";
 import { DraftPanelCard } from "@/components/import/draft-panel-card";
+import { DraftVitalSessionCard } from "@/components/import/draft-vital-session-card";
 import { ImportProgress } from "@/components/import/import-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,9 +68,15 @@ export default async function ImportJobDetailPage({
   }));
   const facilities = listFacilityOptions();
 
-  const pendingCount = job.drafts.filter((d) => d.reviewStatus === "pending").length;
-  const acceptedCount = job.drafts.filter((d) => d.reviewStatus === "accepted").length;
-  const rejectedCount = job.drafts.filter((d) => d.reviewStatus === "rejected").length;
+  const pendingCount =
+    job.drafts.filter((d) => d.reviewStatus === "pending").length +
+    job.vitalDrafts.filter((d) => d.reviewStatus === "pending").length;
+  const acceptedCount =
+    job.drafts.filter((d) => d.reviewStatus === "accepted").length +
+    job.vitalDrafts.filter((d) => d.reviewStatus === "accepted").length;
+  const rejectedCount =
+    job.drafts.filter((d) => d.reviewStatus === "rejected").length +
+    job.vitalDrafts.filter((d) => d.reviewStatus === "rejected").length;
 
   const showReview =
     job.status === "ready" ||
@@ -163,22 +170,21 @@ export default async function ImportJobDetailPage({
       ) : null}
 
       {showReview ? (
-        <div className="space-y-4">
+        <div className="space-y-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-medium">Draft panels</h2>
+              <h2 className="text-lg font-medium">Review drafts</h2>
               <p className="text-xs text-zinc-500">
-                {job.drafts.length} panel{job.drafts.length === 1 ? "" : "s"}
-                {showReview ? (
-                  <>
-                    {" · "}
-                    <span className="tabular-nums">{pendingCount}</span> pending
-                    {" · "}
-                    <span className="tabular-nums">{acceptedCount}</span> accepted
-                    {" · "}
-                    <span className="tabular-nums">{rejectedCount}</span> rejected
-                  </>
-                ) : null}
+                {job.drafts.length} lab panel{job.drafts.length === 1 ? "" : "s"}
+                {" · "}
+                {job.vitalDrafts.length} vitals session
+                {job.vitalDrafts.length === 1 ? "" : "s"}
+                {" · "}
+                <span className="tabular-nums">{pendingCount}</span> pending
+                {" · "}
+                <span className="tabular-nums">{acceptedCount}</span> accepted
+                {" · "}
+                <span className="tabular-nums">{rejectedCount}</span> rejected
               </p>
             </div>
             {job.status === "ready" && pendingCount > 0 ? (
@@ -190,26 +196,53 @@ export default async function ImportJobDetailPage({
             ) : null}
           </div>
 
-          {job.drafts.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
-              No draft panels were extracted from this PDF.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {job.drafts.map((draft) => (
+          <section className="space-y-3">
+            <h3 className="text-base font-medium text-zinc-800">Lab panels</h3>
+            {job.drafts.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
+                No lab panels extracted from this PDF.
+              </div>
+            ) : (
+              job.drafts.map((draft) => (
                 <DraftPanelCard
                   key={draft.id}
                   draft={draft}
                   analytes={analytes}
                   facilities={facilities}
                 />
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-base font-medium text-zinc-800">
+              Vitals & body composition
+            </h3>
+            {job.vitalDrafts.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center text-sm text-zinc-500">
+                No vitals or body-composition sessions extracted. (Works best
+                with text-layer InBody/scale reports or notes that include BP,
+                weight, etc.)
+              </div>
+            ) : (
+              job.vitalDrafts.map((draft) => (
+                <DraftVitalSessionCard key={draft.id} draft={draft} />
+              ))
+            )}
+          </section>
 
           {job.status === "completed" ? (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-              Import complete. Accepted panels are linked to this PDF in Labs and Documents.
+              Import complete. Accepted labs are in Labs; accepted vitals are in
+              Vitals. The PDF is linked on Documents.
+            </div>
+          ) : null}
+
+          {job.status === "rejected" &&
+          job.drafts.length === 0 &&
+          job.vitalDrafts.length === 0 ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Nothing was extracted from this PDF (no labs or vitals drafts).
             </div>
           ) : null}
 

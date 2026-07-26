@@ -76,3 +76,36 @@ export function savePinnedAnalytes(keys: string[]): string[] {
   setRaw(PINNED_ANALYTES_KEY, JSON.stringify(cleaned));
   return cleaned;
 }
+
+const PINNED_VITALS_KEY = "dashboard.pinned_vitals";
+
+/** Metric type keys (or `bmi`) pinned to the dashboard vitals section. */
+export function getPinnedVitals(): string[] {
+  const raw = getRaw(PINNED_VITALS_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return [
+      ...new Set(
+        parsed
+          .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+          .map((x) => x.trim()),
+      ),
+    ];
+  } catch {
+    return [];
+  }
+}
+
+export function savePinnedVitals(keys: string[]): string[] {
+  const cleaned = [
+    ...new Set(
+      keys
+        .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+        .map((x) => x.trim()),
+    ),
+  ];
+  setRaw(PINNED_VITALS_KEY, JSON.stringify(cleaned));
+  return cleaned;
+}

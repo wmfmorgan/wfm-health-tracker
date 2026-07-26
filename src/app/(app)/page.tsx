@@ -3,8 +3,13 @@ import { ageFromDob } from "@/lib/dates";
 import { getDashboardSummary } from "@/server/services/dashboard";
 import { globalSearch } from "@/server/services/search";
 import { listAnalyteSummaries } from "@/server/services/analyte-results";
-import { getPinnedAnalytes } from "@/server/services/settings";
+import {
+  getPinnedAnalytes,
+  getPinnedVitals,
+} from "@/server/services/settings";
+import { listMetricSummaries } from "@/server/services/metrics";
 import { LabTrendsSection } from "@/components/dashboard/lab-trends-section";
+import { VitalsTrendsSection } from "@/components/dashboard/vitals-trends-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -31,7 +36,9 @@ export default async function DashboardPage({
   const age = ageFromDob(summary.profile.dateOfBirth);
   const displayName = summary.profile.displayName?.trim() || "Your chart";
   const analyteSummaries = listAnalyteSummaries();
-  const pinnedKeys = getPinnedAnalytes();
+  const pinnedAnalyteKeys = getPinnedAnalytes();
+  const metricSummaries = listMetricSummaries();
+  const pinnedVitalKeys = getPinnedVitals();
 
   return (
     <div className="text-zinc-900">
@@ -131,9 +138,14 @@ export default async function DashboardPage({
         />
       </div>
 
+      <VitalsTrendsSection
+        summaries={metricSummaries}
+        pinnedKeys={pinnedVitalKeys}
+      />
+
       <LabTrendsSection
         summaries={analyteSummaries}
-        pinnedKeys={pinnedKeys}
+        pinnedKeys={pinnedAnalyteKeys}
       />
 
       <section className="mt-8 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">

@@ -1,6 +1,11 @@
-import { ageFromDob } from "@/lib/dates";
+import Link from "next/link";
+import { ageFromDob, formatDisplayDate } from "@/lib/dates";
 import { getProfile } from "@/server/services/profile";
 import { listAllergies } from "@/server/services/allergies";
+import {
+  formatReadingDisplay,
+  getLatestSummary,
+} from "@/server/services/metrics";
 import { saveProfileAction } from "@/server/actions/profile";
 import { createAllergyAction, deleteAllergyAction } from "@/server/actions/allergies";
 import { ConfirmDeleteButton } from "@/components/records/confirm-delete-button";
@@ -16,10 +21,77 @@ export default function ProfilePage() {
   const profile = getProfile();
   const allergies = listAllergies();
   const age = ageFromDob(profile.dateOfBirth);
+  const vitals = getLatestSummary();
+  const latestBp = vitals.latestByType.blood_pressure;
+  const latestWeight = vitals.latestByType.weight;
 
   return (
     <div className="text-zinc-900">
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">Profile</h1>
+
+      <section className="mb-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-medium">Vitals snapshot</h2>
+          <Link
+            href="/vitals"
+            className="text-sm font-medium text-zinc-700 underline-offset-2 hover:underline"
+          >
+            Open vitals history →
+          </Link>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Current height
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {profile.heightValue != null
+                ? `${profile.heightValue} ${profile.heightUnit ?? ""}`
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Current weight
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {profile.weightValue != null
+                ? `${profile.weightValue} ${profile.weightUnit ?? ""}`
+                : "—"}
+              {latestWeight ? (
+                <span className="ml-1 text-xs font-normal text-zinc-500">
+                  ({formatDisplayDate(latestWeight.measuredAt)})
+                </span>
+              ) : null}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Latest BP
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {latestBp ? formatReadingDisplay(latestBp) : "—"}
+              {latestBp ? (
+                <span className="ml-1 text-xs font-normal text-zinc-500">
+                  ({formatDisplayDate(latestBp.measuredAt)})
+                </span>
+              ) : null}
+            </p>
+          </div>
+          {vitals.bmiFormatted ? (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                BMI
+              </p>
+              <p className="mt-1 text-sm font-medium">{vitals.bmiFormatted}</p>
+            </div>
+          ) : null}
+        </div>
+        <p className="mt-3 text-xs text-zinc-500">
+          Height and weight on this form are the current values. Changing them
+          also adds a dated reading under Vitals.
+        </p>
+      </section>
 
       <section className="mb-10 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-medium">Demographics & baseline</h2>

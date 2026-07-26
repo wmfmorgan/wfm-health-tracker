@@ -7,6 +7,7 @@ import {
   createImportJob,
   writeDraftsFromExtracted,
   acceptDraftPanel,
+  acceptDraftVitalSession,
   rejectDraftPanel,
   discardImportJob,
   getImportJob,
@@ -17,6 +18,7 @@ import {
   runExtractForJob,
 } from "@/server/services/imports";
 import { getLabPanel, listLabPanels } from "@/server/services/labs";
+import { getSessionWithReadings, getLatestReading } from "@/server/services/metrics";
 import type { AIProvider } from "@/server/ai/types";
 
 useFreshDb();
@@ -50,7 +52,7 @@ function sampleExtracted(panelCount = 1) {
       },
     ],
   }));
-  return { panels };
+  return { panels, vitalSessions: [] };
 }
 
 describe("import service", () => {
@@ -219,6 +221,97 @@ describe("import service", () => {
     expect(getDb().select().from(labPanels).all().every((p) => p.source === "pdf_import")).toBe(
       true,
     );
+  });
+
+  it("accepts vital session draft into live vitals with document link", () => {
+    const doc = saveDoc("inbody.pdf");
+    const job = createImportJob({
+      documentId: doc.id,
+      provider: "ollama",
+      model: "llama3.2",
+    });
+    writeDraftsFromExtracted(job.id, {
+      panels: [],
+      vitalSessions: [
+        {
+          measuredAt: "2026-07-20",
+          source: "device_report",
+          deviceLabel: "InBody",
+          notes: null,
+          readings: [
+            { metricType: "weight", valuePrimary: 211.2, unit: "lb" },
+            {
+              metricType: "body_fat_percent",
+              valuePrimary: 19.3,
+              unit: "%",
+              category: "Low",
+            },
+            {
+              metricType: "blood_pressure",
+              valuePrimary: 120,
+              valueSecondary: 78,
+              unit: "mmHg",
+            },
+            { metricType: "visceral_fat_index", valuePrimary: 9, unit: "index" },
+          ],
+        },
+      ],
+    });
+    setJobStatus(job.id, "ready");
+
+    const loaded = getImportJob(job.id)!;
+    expect(loaded.drafts).toHaveLength(0);
+    expect(loaded.vitalDrafts).toHaveLength(1);
+    expect(loaded.vitalDrafts[0]!.readings).toHaveLength(4);
+
+    const { sessionId } = acceptDraftVitalSession(loaded.vitalDrafts[0]!.id);
+    const live = getSessionWithReadings(sessionId)!;
+    expect(live.deviceLabel).toBe("InBody");
+    expect(live.readings.some((r) => r.metricType === "body_fat_percent")).toBe(
+      true,
+    );
+    expect(getLatestReading("weight")?.valuePrimary).toBe(211.2);
+
+    const linked = listDocumentsForEntity("metric_session", sessionId);
+    expect(linked).toHaveLength(1);
+    expect(linked[0]!.id).toBe(doc.id);
+
+    const done = getImportJob(job.id)!;
+    expect(done.status).toBe("completed");
+    expect(done.vitalDrafts[0]!.reviewStatus).toBe("accepted");
+    expect(done.vitalDrafts[0]!.committedSessionId).toBe(sessionId);
+  });
+
+  it("acceptAllPending accepts labs and vitals together", () => {
+    const doc = saveDoc("mixed.pdf");
+    const job = createImportJob({
+      documentId: doc.id,
+      provider: "ollama",
+      model: "llama3.2",
+    });
+    writeDraftsFromExtracted(job.id, {
+      panels: sampleExtracted(1).panels,
+      vitalSessions: [
+        {
+          measuredAt: "2026-07-01",
+          source: "manual",
+          deviceLabel: null,
+          notes: null,
+          readings: [
+            { metricType: "heart_rate", valuePrimary: 72, unit: "bpm" },
+          ],
+        },
+      ],
+    });
+    setJobStatus(job.id, "ready");
+    acceptAllPending(job.id);
+
+    const done = getImportJob(job.id)!;
+    expect(done.status).toBe("completed");
+    expect(done.drafts[0]!.reviewStatus).toBe("accepted");
+    expect(done.vitalDrafts[0]!.reviewStatus).toBe("accepted");
+    expect(listLabPanels().length).toBeGreaterThanOrEqual(1);
+    expect(getLatestReading("heart_rate")?.valuePrimary).toBe(72);
   });
 });
 

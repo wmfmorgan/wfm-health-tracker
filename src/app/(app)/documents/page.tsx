@@ -35,6 +35,8 @@ function entityHref(entityType: string, entityId: string): string | null {
       return `/tests/${entityId}`;
     case "procedure":
       return `/procedures/${entityId}`;
+    case "metric_session":
+      return `/vitals/sessions/${entityId}`;
     default:
       return null;
   }
@@ -44,6 +46,8 @@ function entityLabel(entityType: string): string {
   switch (entityType) {
     case "lab_panel":
       return "lab panel";
+    case "metric_session":
+      return "vitals session";
     default:
       return entityType;
   }

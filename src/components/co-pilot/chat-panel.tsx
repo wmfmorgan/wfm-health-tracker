@@ -62,11 +62,13 @@ export type ScopeKey =
   | "labs"
   | "tests"
   | "procedures"
+  | "vitals"
   | "acceptedViews"
   | "myPlan";
 
 const SCOPE_OPTIONS: { key: ScopeKey; label: string }[] = [
   { key: "profile", label: "Profile" },
+  { key: "vitals", label: "Vitals" },
   { key: "allergies", label: "Allergies" },
   { key: "diagnoses", label: "Diagnoses" },
   { key: "medications", label: "Meds" },
@@ -87,6 +89,7 @@ const DEFAULT_SCOPE: Record<ScopeKey, boolean> = {
   labs: true,
   tests: true,
   procedures: true,
+  vitals: true,
   acceptedViews: true,
   myPlan: true,
 };

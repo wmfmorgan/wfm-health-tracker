@@ -15,6 +15,7 @@ Your data lives under `data/` (SQLite + uploads). Backup = copy that folder.
 ## Phase 1 features
 
 - **Profile** — display name, DOB (age derived), sex, height/weight with units, blood type, notes
+- **Vitals** — time-series BP, height, weight, HR, glucose, SpO₂, temperature, waist; body-composition sessions (InBody-style); BMI from latest height + weight; dual-writes current height/weight on Profile
 - **Allergies** — structured list (name, severity, reaction, notes)
 - **Diagnoses** — CRUD with status, ICD code, dates, clinician/facility
 - **Medications** — CRUD including PRN, dose/route/frequency, start/end, status
@@ -34,14 +35,14 @@ Your data lives under `data/` (SQLite + uploads). Backup = copy that folder.
 
 Import digital lab PDFs, propose draft lab panels with AI, review and edit, then commit into your records.
 
-- **Import flow** — upload PDF → extract text → AI draft → review UI → commit labs (+ attach PDF)
+- **Import flow** — upload PDF → extract text → AI draft → review UI → commit **labs and/or vitals** (body-comp sessions, BP, weight, etc.) + attach PDF
 - **Dual providers**
   - **Ollama** (local, default) — text stays on your machine; requires a running Ollama server
   - **Grok** (xAI cloud) — requires `XAI_API_KEY`; PDF text is sent to xAI when Grok is selected
 - **Text-layer requirement** — only digital PDFs with a selectable text layer. Scanned/image-only PDFs (OCR) are not supported
 - **Settings** — default provider, Grok model, Ollama base URL/model; `XAI_API_KEY` status (yes/no) is shown read-only
 
-Assistive only — not medical advice. Always review drafts before commit.
+Assistive only — not medical advice. Always review drafts before commit. Lab panels and vitals sessions can appear on the same import; accept each independently.
 
 ---
 
@@ -236,12 +237,13 @@ Backlog FRs (see `docs/superpowers/specs/FUTURE-REQUIREMENTS.md`):
 - **FR-010** — auto-invoke skills without slash  
 - **FR-011** — AI-maintained health profile (user-editable; used in chat/evaluate)  
 - **FR-012** — drug interaction skill + flags on meds/supplements  
-- **FR-013** — vitals & body metrics time series (BP, weight, BMI, … catalog TBD)  
-- **FR-014** — dashboard trends for selected analytes  
-- **FR-015** — analyte results table (latest + expandable history, lab/document links)  
+- **FR-013** — vitals & body metrics (done)  
+- **FR-014** — dashboard trends for selected analytes (done)  
+- **FR-015** — analyte results table (done)  
 - **FR-016** — symptoms log + AI cross-check vs labs/diagnoses/chart  
+- **FR-017** — doctor-visit notes on labs and tests  
+- **FR-018** — OCR / image import (scanned PDFs + PNG/JPEG; e.g. Ollama `glm-ocr`)  
 
 Also later / non-goals for now:
 
-- OCR for scanned PDFs  
 - Multi-user, mobile apps

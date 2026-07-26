@@ -22,6 +22,8 @@ function entityPath(entityType: EntityType, entityId: string): string {
       return `/tests/${entityId}`;
     case "procedure":
       return `/procedures/${entityId}`;
+    case "metric_session":
+      return `/vitals/sessions/${entityId}`;
   }
 }
 

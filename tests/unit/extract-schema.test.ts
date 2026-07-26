@@ -125,4 +125,58 @@ describe("extractLabsFromText", () => {
     ).rejects.toThrow(/validation after repair/i);
     expect(provider.calls).toBe(2);
   });
+
+  it("extracts vital sessions and maps free-text metric names", async () => {
+    const provider = new FakeProvider([
+      {
+        panels: [],
+        vitalSessions: [
+          {
+            measuredAt: "2026-07-20",
+            deviceLabel: "InBody",
+            readings: [
+              { metricType: "Body Fat Percentage", valuePrimary: 19.3, unit: "%" },
+              { metricType: "weight", valuePrimary: 211.2, unit: "lbs" },
+              {
+                name: "Blood Pressure",
+                value: "128/82",
+                unit: "mmHg",
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await extractLabsFromText({
+      text: "InBody Weight 211.2 Body Fat 19.3%",
+      provider,
+      model: "fake",
+    });
+
+    expect(result.panels).toHaveLength(0);
+    expect(result.vitalSessions).toHaveLength(1);
+    const types = result.vitalSessions[0]!.readings.map((r) => r.metricType);
+    expect(types).toContain("body_fat_percent");
+    expect(types).toContain("weight");
+    expect(types).toContain("blood_pressure");
+    const weight = result.vitalSessions[0]!.readings.find(
+      (r) => r.metricType === "weight",
+    );
+    expect(weight?.unit).toBe("lb");
+    const bp = result.vitalSessions[0]!.readings.find(
+      (r) => r.metricType === "blood_pressure",
+    );
+    expect(bp?.valuePrimary).toBe(128);
+    expect(bp?.valueSecondary).toBe(82);
+  });
+});
+
+describe("mapExtractedMetricType", () => {
+  it("maps common body-comp aliases", async () => {
+    const { mapExtractedMetricType } = await import("@/lib/metrics/map-extracted");
+    expect(mapExtractedMetricType("Visceral Fat Index")).toBe("visceral_fat_index");
+    expect(mapExtractedMetricType("SMM")).toBe("skeletal_muscle_mass");
+    expect(mapExtractedMetricType("unknown_xyz")).toBeNull();
+  });
 });

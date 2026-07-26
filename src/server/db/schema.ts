@@ -343,3 +343,64 @@ export const chatMessages = sqliteTable("chat_messages", {
   model: text("model"),
   createdAt: text("created_at").notNull(),
 });
+
+/** Body composition / multi-metric measurement sessions (e.g. InBody-style reports) */
+export const metricSessions = sqliteTable("metric_sessions", {
+  id: text("id").primaryKey(),
+  measuredAt: text("measured_at").notNull(), // YYYY-MM-DD
+  source: text("source").notNull().default("manual"), // manual | device_report
+  deviceLabel: text("device_label"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+/** Individual metric readings — ad-hoc (session_id null) or part of a session */
+export const metricReadings = sqliteTable("metric_readings", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id").references(() => metricSessions.id, {
+    onDelete: "cascade",
+  }),
+  metricType: text("metric_type").notNull(),
+  valuePrimary: real("value_primary").notNull(),
+  valueSecondary: real("value_secondary"), // e.g. diastolic BP
+  unit: text("unit").notNull(),
+  category: text("category"), // device band label e.g. Standard / Low / High
+  measuredAt: text("measured_at").notNull(), // YYYY-MM-DD
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+/** AI import drafts: body-comp / vitals session before user accept */
+export const draftMetricSessions = sqliteTable("draft_metric_sessions", {
+  id: text("id").primaryKey(),
+  importJobId: text("import_job_id")
+    .notNull()
+    .references(() => importJobs.id, { onDelete: "cascade" }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  measuredAt: text("measured_at").notNull(),
+  source: text("source").notNull().default("device_report"), // manual | device_report
+  deviceLabel: text("device_label"),
+  notes: text("notes"),
+  reviewStatus: text("review_status").notNull().default("pending"), // pending | accepted | rejected
+  committedSessionId: text("committed_session_id"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const draftMetricReadings = sqliteTable("draft_metric_readings", {
+  id: text("id").primaryKey(),
+  draftSessionId: text("draft_session_id")
+    .notNull()
+    .references(() => draftMetricSessions.id, { onDelete: "cascade" }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  metricType: text("metric_type").notNull(),
+  valuePrimary: real("value_primary").notNull(),
+  valueSecondary: real("value_secondary"),
+  unit: text("unit").notNull(),
+  category: text("category"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});

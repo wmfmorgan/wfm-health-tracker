@@ -11,6 +11,8 @@ import {
   retryFailedJob,
   acceptDraftPanel,
   rejectDraftPanel,
+  acceptDraftVitalSession,
+  rejectDraftVitalSession,
   acceptAllPending,
   discardImportJob,
   updateDraftPanel,
@@ -59,6 +61,9 @@ function revalidateImportPaths(jobId?: string) {
   revalidatePath("/import", "layout");
   if (jobId) revalidatePath(`/import/${jobId}`);
   revalidatePath("/labs");
+  revalidatePath("/vitals");
+  revalidatePath("/profile");
+  revalidatePath("/");
   revalidatePath("/documents");
 }
 
@@ -88,6 +93,26 @@ export async function rejectDraftPanelAction(draftPanelId: string) {
   rejectDraftPanel(draftPanelId);
   revalidatePath("/import", "layout");
   revalidatePath("/labs");
+  return { ok: true as const };
+}
+
+export async function acceptDraftVitalSessionAction(draftSessionId: string) {
+  const { sessionId, importJobId, jobStatus } =
+    acceptDraftVitalSession(draftSessionId);
+  revalidateImportPaths(importJobId);
+  revalidatePath(`/vitals/sessions/${sessionId}`);
+  revalidatePath(`/import/${importJobId}`);
+
+  if (jobStatus === "completed") {
+    redirect("/import");
+  }
+
+  return { ok: true as const, sessionId };
+}
+
+export async function rejectDraftVitalSessionAction(draftSessionId: string) {
+  rejectDraftVitalSession(draftSessionId);
+  revalidateImportPaths();
   return { ok: true as const };
 }
 
